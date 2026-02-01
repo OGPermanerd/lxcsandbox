@@ -9,12 +9,12 @@ Requirements for getting the sandbox infrastructure working end-to-end.
 
 ### Host Setup
 
-- [ ] **HOST-01**: Script detects Ubuntu version and validates compatibility
-- [ ] **HOST-02**: Script installs LXD via snap if not present
-- [ ] **HOST-03**: Script creates lxdbr0 bridge network with 10.10.10.0/24 subnet
-- [ ] **HOST-04**: Script enables NAT for container internet access
-- [ ] **HOST-05**: Script creates btrfs storage pool for containers
-- [ ] **HOST-06**: Script configures UFW firewall to allow LXD traffic
+- [x] **HOST-01**: Script detects Ubuntu version and validates compatibility
+- [x] **HOST-02**: Script installs LXD via snap if not present
+- [x] **HOST-03**: Script creates lxdbr0 bridge network with 10.10.10.0/24 subnet
+- [x] **HOST-04**: Script enables NAT for container internet access
+- [x] **HOST-05**: Script creates btrfs storage pool for containers
+- [x] **HOST-06**: Script configures UFW firewall to allow LXD traffic
 
 ### Container Creation
 
@@ -86,12 +86,12 @@ Deferred to future release after basic workflow is validated.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HOST-01 | Phase 1 | Pending |
-| HOST-02 | Phase 1 | Pending |
-| HOST-03 | Phase 1 | Pending |
-| HOST-04 | Phase 1 | Pending |
-| HOST-05 | Phase 1 | Pending |
-| HOST-06 | Phase 1 | Pending |
+| HOST-01 | Phase 1 | Complete |
+| HOST-02 | Phase 1 | Complete |
+| HOST-03 | Phase 1 | Complete |
+| HOST-04 | Phase 1 | Complete |
+| HOST-05 | Phase 1 | Complete |
+| HOST-06 | Phase 1 | Complete |
 | CONT-01 | Phase 2 | Pending |
 | CONT-02 | Phase 2 | Pending |
 | CONT-03 | Phase 2 | Pending |
@@ -126,4 +126,4 @@ Deferred to future release after basic workflow is validated.
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-01 after roadmap creation*
+*Last updated: 2026-02-01 after Phase 1 completion*
