@@ -87,16 +87,16 @@ Plans:
 **Goal**: User has polished migrate command with safety features and clear feedback
 **Depends on**: Phase 8
 **Requirements**: SRC-06, CLI-01, CLI-02, CLI-03, CLI-04, CLI-05
+**Plans:** 1 plan
 **Success Criteria** (what must be TRUE):
   1. `sandbox.sh migrate <container> <source>` command works end-to-end
   2. Pre-migration snapshot is created automatically before any changes
   3. If project already exists in container, user is offered re-migration options
   4. Migration outputs clear success/error messages with next steps
   5. Migration summary shows detected tools and actions taken
-**Plans**: TBD
 
 Plans:
-- [ ] 09-01: Integrate migrate command into sandbox.sh with UX polish
+- [ ] 09-01-PLAN.md — Add migrate command to sandbox.sh with safety and UX polish
 
 ## Progress
 
@@ -110,7 +110,7 @@ Plans:
 | 6. Core Transfer | v1.1 | 1/1 | Complete | 2026-02-01 |
 | 7. Node.js Setup | v1.1 | 1/1 | Complete | 2026-02-01 |
 | 8. Database Integration | v1.1 | 1/1 | Complete | 2026-02-01 |
-| 9. CLI Integration | v1.1 | 0/1 | Not started | - |
+| 9. CLI Integration | v1.1 | 0/1 | Planned | - |
 
 ## Requirement Coverage
 
