@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # 04-migrate-project.sh
-# Transfers project source code into LXC containers via git clone or local copy
+# Migrates project source code into LXC containers and installs dependencies
 # Run as root or with sudo
 #
 # Usage: ./04-migrate-project.sh <container-name> <source> [--branch <branch>]
@@ -17,6 +17,10 @@
 # - Clones git repos directly inside container with optional --branch
 # - Copies local directories via tar pipe, excluding node_modules and .git
 # - Copies .env file separately (may be gitignored)
+# - Detects package manager from lockfile (pnpm > yarn > npm)
+# - Installs Node version from .nvmrc if present
+# - Runs dependency installation with correct package manager
+# - Copies .env.example to .env if .env is missing
 # - Destination is always /root/projects/<project-name>
 #
 
@@ -279,6 +283,37 @@ copy_env_example_if_needed() {
 }
 
 # -------------------------------------------
+# Node.js Setup Orchestration
+# -------------------------------------------
+
+# Main Node.js setup orchestration
+setup_nodejs_dependencies() {
+    local project_dir="$1"
+
+    log_info "=== Node.js Setup ==="
+
+    # Step 1: .env.example fallback (before npm install may need env vars)
+    copy_env_example_if_needed "$project_dir"
+
+    # Step 2: Detect package manager
+    local pm
+    pm=$(detect_package_manager "$project_dir")
+    log_info "Detected package manager: $pm"
+
+    # Step 3: Handle .nvmrc if present
+    setup_node_version "$project_dir"
+
+    # Step 4: Install dependencies
+    log_info "Installing dependencies..."
+    if ! install_dependencies "$project_dir" "$pm"; then
+        log_error "Dependency installation failed"
+        return 1
+    fi
+
+    log_info "Node.js setup complete"
+}
+
+# -------------------------------------------
 # Transfer Functions
 # -------------------------------------------
 
@@ -409,12 +444,18 @@ transfer_project() {
     echo ""
     echo "Files in project root:"
     lxc exec "$CONTAINER_NAME" -- ls -la "$dest_dir" | head -15
+    echo ""
+
+    # Install Node.js dependencies
+    setup_nodejs_dependencies "$dest_dir"
 
     echo ""
-    log_info "Next steps (run inside container):"
+    log_info "=== Migration Complete ==="
+    log_info "Project is ready at: $CONTAINER_NAME:$dest_dir"
+    echo ""
+    log_info "To access the project:"
     echo "  lxc exec $CONTAINER_NAME -- bash"
     echo "  cd $dest_dir"
-    echo "  npm install  # or yarn/pnpm"
 }
 
 # -------------------------------------------
@@ -423,4 +464,4 @@ transfer_project() {
 
 log_info "Starting project migration..."
 transfer_project
-log_info "Migration phase 1 (file transfer) complete!"
+log_info "Migration complete!"
