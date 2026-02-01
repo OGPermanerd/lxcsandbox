@@ -474,6 +474,83 @@ SHELL_CONFIG
     log_info "Shell environment configured"
 }
 
+# Create CLAUDE.md for Claude Code awareness
+create_claude_md() {
+    log_info "Creating CLAUDE.md for Claude Code..."
+
+    local node_version pg_version tailscale_ip container_name
+    node_version=$(container_exec 'node --version 2>/dev/null || echo "not installed"')
+    pg_version=$(container_exec 'psql --version 2>/dev/null | head -1 || echo "not installed"')
+    tailscale_ip=$(container_exec 'tailscale ip -4 2>/dev/null || echo "not connected"')
+    container_name="$CONTAINER_NAME"
+
+    container_exec "cat > /root/CLAUDE.md << 'CLAUDE_CONFIG'
+# Dev Sandbox Environment
+
+This is an isolated LXC container for development. You have full root access.
+
+## System
+- **Container:** $container_name
+- **OS:** Ubuntu 24.04 LTS
+- **Tailscale IP:** $tailscale_ip
+- **User:** root
+
+## Installed Tools
+
+### Node.js
+- **Version:** $node_version
+- **Manager:** nvm (in ~/.nvm)
+- **Package managers:** npm, yarn, pnpm
+
+### PostgreSQL
+- **Version:** $pg_version
+- **Host:** localhost:5432
+- **User:** dev
+- **Password:** dev
+- **Database:** dev
+- **DATABASE_URL:** postgresql://dev:dev@localhost:5432/dev
+
+### Other Tools
+- Playwright (Chromium, Firefox)
+- Claude Code CLI
+- git, curl, jq, build-essential
+
+## Common Commands
+
+\`\`\`bash
+# Database
+psql -U dev dev              # Connect to PostgreSQL
+pg                           # Alias for above
+
+# Node.js
+nvm use 22                   # Switch Node version
+npm install / yarn / pnpm install
+
+# Tailscale
+tailscale status             # Check connection
+tailscale ip -4              # Get Tailscale IP
+
+# Project location
+cd /root/projects/<name>     # Migrated projects go here
+\`\`\`
+
+## Environment Variables
+
+These are pre-configured in ~/.bashrc:
+- \`DATABASE_URL\` - PostgreSQL connection string
+- \`PGHOST\`, \`PGPORT\`, \`PGUSER\`, \`PGPASSWORD\`, \`PGDATABASE\`
+- \`NVM_DIR\` - nvm installation directory
+
+## Notes
+
+- This container is ephemeral - create snapshots before risky operations
+- PostgreSQL uses trust auth locally, password auth for Tailscale connections
+- Projects are migrated to /root/projects/<project-name>
+CLAUDE_CONFIG"
+
+    log_info "CLAUDE.md created at /root/CLAUDE.md"
+}
+
 # -------------------------------------------
 # Status Summary
 # -------------------------------------------
@@ -586,6 +663,7 @@ install_node           # After apt, provides npm
 install_playwright     # Requires npm
 install_claude_code    # Last - independent
 configure_shell        # After all tools installed
+create_claude_md       # Claude Code environment awareness
 
 # Final verification and status summary
 print_status_summary
