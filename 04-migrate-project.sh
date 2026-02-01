@@ -259,3 +259,71 @@ copy_env_file() {
         fi
     fi
 }
+
+# -------------------------------------------
+# Main Transfer Orchestration
+# -------------------------------------------
+
+transfer_project() {
+    local source_type
+    source_type=$(detect_source_type "$SOURCE")
+
+    local project_name
+    project_name=$(derive_project_name "$SOURCE")
+    local dest_dir="/root/projects/$project_name"
+
+    log_info "=== Project Migration ==="
+    log_info "Container: $CONTAINER_NAME"
+    log_info "Source: $SOURCE"
+    log_info "Source type: $source_type"
+    log_info "Destination: $dest_dir"
+    [[ -n "${BRANCH:-}" ]] && log_info "Branch: $BRANCH"
+    echo ""
+
+    # Create projects directory
+    container_exec "mkdir -p /root/projects"
+
+    case "$source_type" in
+        git)
+            clone_git_repository "$SOURCE" "$dest_dir" "${BRANCH:-}"
+            ;;
+        local)
+            copy_local_directory "$SOURCE" "$dest_dir"
+            # For local copy, also copy .env if it exists
+            copy_env_file "$SOURCE" "$dest_dir"
+            ;;
+        *)
+            log_error "Unknown source type: $SOURCE"
+            log_error "Source must be a git URL or existing local directory"
+            exit 1
+            ;;
+    esac
+
+    # Verify transfer succeeded
+    if ! lxc exec "$CONTAINER_NAME" -- test -d "$dest_dir"; then
+        log_error "Transfer failed - destination directory not created"
+        exit 1
+    fi
+
+    # Show what was transferred
+    echo ""
+    log_info "=== Transfer Complete ==="
+    log_info "Project location: $CONTAINER_NAME:$dest_dir"
+    echo ""
+    echo "Files in project root:"
+    lxc exec "$CONTAINER_NAME" -- ls -la "$dest_dir" | head -15
+
+    echo ""
+    log_info "Next steps (run inside container):"
+    echo "  lxc exec $CONTAINER_NAME -- bash"
+    echo "  cd $dest_dir"
+    echo "  npm install  # or yarn/pnpm"
+}
+
+# -------------------------------------------
+# Main Execution
+# -------------------------------------------
+
+log_info "Starting project migration..."
+transfer_project
+log_info "Migration phase 1 (file transfer) complete!"
