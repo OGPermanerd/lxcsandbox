@@ -65,7 +65,7 @@ if ! command -v lxc &>/dev/null; then
 fi
 
 # Check if LXD is properly initialized (has storage pool and profile with root disk)
-if ! lxc profile device list default 2>/dev/null | grep -q "^root:"; then
+if ! lxc profile show default 2>/dev/null | grep -q "pool:"; then
     log_error "LXD is not properly initialized (default profile missing root disk)"
     echo ""
     echo "Run the host setup script to fix this:"
