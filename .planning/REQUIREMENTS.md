@@ -14,7 +14,7 @@ Requirements for migrating existing projects into containers with full environme
 - [x] **SRC-03**: Script supports git branch/tag specification with `--branch` flag
 - [x] **SRC-04**: Script clones git repos to `/root/projects/<name>` in container
 - [x] **SRC-05**: Script copies local directories via rsync (excludes node_modules, .git)
-- [ ] **SRC-06**: Script detects if project already exists and offers re-migration options
+- [x] **SRC-06**: Script detects if project already exists and offers re-migration options
 
 ### Node.js Setup (NODE)
 
@@ -43,11 +43,11 @@ Requirements for migrating existing projects into containers with full environme
 
 ### CLI Integration (CLI)
 
-- [ ] **CLI-01**: sandbox.sh migrate command accepts container name and source
-- [ ] **CLI-02**: sandbox.sh migrate calls 04-migrate-project.sh backend
-- [ ] **CLI-03**: Script creates pre-migration snapshot automatically
-- [ ] **CLI-04**: Script outputs clear success/error messages with next steps
-- [ ] **CLI-05**: Script provides migration summary (detected tools, actions taken)
+- [x] **CLI-01**: sandbox.sh migrate command accepts container name and source
+- [x] **CLI-02**: sandbox.sh migrate calls 04-migrate-project.sh backend
+- [x] **CLI-03**: Script creates pre-migration snapshot automatically
+- [x] **CLI-04**: Script outputs clear success/error messages with next steps
+- [x] **CLI-05**: Script provides migration summary (detected tools, actions taken)
 
 ## Traceability
 
@@ -58,7 +58,7 @@ Requirements for migrating existing projects into containers with full environme
 | SRC-03 | Phase 6 | Must Have | Complete |
 | SRC-04 | Phase 6 | Must Have | Complete |
 | SRC-05 | Phase 6 | Must Have | Complete |
-| SRC-06 | Phase 9 | Should Have | Pending |
+| SRC-06 | Phase 9 | Should Have | Complete |
 | NODE-01 | Phase 7 | Must Have | Complete |
 | NODE-02 | Phase 7 | Must Have | Complete |
 | NODE-03 | Phase 7 | Should Have | Complete |
@@ -75,11 +75,11 @@ Requirements for migrating existing projects into containers with full environme
 | DB-05 | Phase 8 | Must Have | Complete |
 | DB-06 | Phase 8 | Should Have | Complete |
 | DB-07 | Phase 8 | Should Have | Complete |
-| CLI-01 | Phase 9 | Must Have | Pending |
-| CLI-02 | Phase 9 | Must Have | Pending |
-| CLI-03 | Phase 9 | Must Have | Pending |
-| CLI-04 | Phase 9 | Must Have | Pending |
-| CLI-05 | Phase 9 | Must Have | Pending |
+| CLI-01 | Phase 9 | Must Have | Complete |
+| CLI-02 | Phase 9 | Must Have | Complete |
+| CLI-03 | Phase 9 | Must Have | Complete |
+| CLI-04 | Phase 9 | Must Have | Complete |
+| CLI-05 | Phase 9 | Must Have | Complete |
 
 ## Out of Scope
 
