@@ -359,8 +359,59 @@ install_node() {
     log_info "Package managers: npm $npm_ver, yarn $yarn_ver, pnpm $pnpm_ver"
 }
 
-# Placeholder for remaining installation functions
-# install_playwright
-# install_claude_code
+# -------------------------------------------
+# Playwright Installation (PROV-09)
+# -------------------------------------------
+
+# Install Playwright with Chromium and Firefox browsers
+install_playwright() {
+    log_info "Setting up Playwright..."
+
+    # Check if Playwright browsers already installed
+    if container_exec '[ -d "$HOME/.cache/ms-playwright" ]'; then
+        log_info "Playwright browsers already installed"
+        return 0
+    fi
+
+    log_info "Installing Playwright with Chromium and Firefox..."
+    # --with-deps installs system dependencies automatically
+    container_exec '
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        npx playwright install --with-deps chromium firefox
+    '
+
+    log_info "Playwright browsers installed"
+}
+
+# -------------------------------------------
+# Claude Code Installation (PROV-10)
+# -------------------------------------------
+
+# Install Claude Code CLI using native installer
+install_claude_code() {
+    log_info "Setting up Claude Code..."
+
+    # Check if already installed
+    if container_exec 'command -v claude &>/dev/null || [ -f "$HOME/.local/bin/claude" ]'; then
+        local claude_ver
+        claude_ver=$(container_exec '$HOME/.local/bin/claude --version 2>/dev/null || claude --version 2>/dev/null' || echo "installed")
+        log_info "Claude Code already installed: $claude_ver"
+        return 0
+    fi
+
+    log_info "Installing Claude Code CLI..."
+    # Use native installer per RESEARCH.md recommendation (not npm)
+    container_exec 'curl -fsSL https://claude.ai/install.sh | bash'
+
+    # Verify installation
+    if container_exec '[ -f "$HOME/.local/bin/claude" ]'; then
+        log_info "Claude Code installed at ~/.local/bin/claude"
+    else
+        log_warn "Claude Code installation may have failed - check manually"
+    fi
+}
+
+# Placeholder for remaining functions
 # configure_shell
 # print_status_summary
