@@ -18,14 +18,14 @@ Requirements for getting the sandbox infrastructure working end-to-end.
 
 ### Container Creation
 
-- [ ] **CONT-01**: Script accepts container name as argument
-- [ ] **CONT-02**: Script validates container name format
-- [ ] **CONT-03**: Script launches Ubuntu 24.04 container from image
-- [ ] **CONT-04**: Script adds TUN device to container for Tailscale
-- [ ] **CONT-05**: Script sets memory limit (4GB default)
-- [ ] **CONT-06**: Script sets CPU limit (2 cores default)
-- [ ] **CONT-07**: Script waits for container network connectivity
-- [ ] **CONT-08**: Script installs basic packages (curl, git, ssh)
+- [x] **CONT-01**: Script accepts container name as argument
+- [x] **CONT-02**: Script validates container name format
+- [x] **CONT-03**: Script launches Ubuntu 24.04 container from image
+- [x] **CONT-04**: Script adds TUN device to container for Tailscale
+- [x] **CONT-05**: Script sets memory limit (4GB default)
+- [x] **CONT-06**: Script sets CPU limit (matches host cores)
+- [x] **CONT-07**: Script waits for container network connectivity
+- [x] **CONT-08**: Script installs basic packages (curl, git, ssh)
 
 ### Stack Provisioning
 
@@ -92,14 +92,14 @@ Deferred to future release after basic workflow is validated.
 | HOST-04 | Phase 1 | Complete |
 | HOST-05 | Phase 1 | Complete |
 | HOST-06 | Phase 1 | Complete |
-| CONT-01 | Phase 2 | Pending |
-| CONT-02 | Phase 2 | Pending |
-| CONT-03 | Phase 2 | Pending |
-| CONT-04 | Phase 2 | Pending |
-| CONT-05 | Phase 2 | Pending |
-| CONT-06 | Phase 2 | Pending |
-| CONT-07 | Phase 2 | Pending |
-| CONT-08 | Phase 2 | Pending |
+| CONT-01 | Phase 2 | Complete |
+| CONT-02 | Phase 2 | Complete |
+| CONT-03 | Phase 2 | Complete |
+| CONT-04 | Phase 2 | Complete |
+| CONT-05 | Phase 2 | Complete |
+| CONT-06 | Phase 2 | Complete |
+| CONT-07 | Phase 2 | Complete |
+| CONT-08 | Phase 2 | Complete |
 | PROV-01 | Phase 3 | Pending |
 | PROV-02 | Phase 3 | Pending |
 | PROV-03 | Phase 3 | Pending |
@@ -126,4 +126,4 @@ Deferred to future release after basic workflow is validated.
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-01 after Phase 1 completion*
+*Last updated: 2026-02-01 after Phase 2 completion*

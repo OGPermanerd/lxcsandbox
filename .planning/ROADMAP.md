@@ -13,7 +13,7 @@ Transform untested shell scripts into a working LXC-based sandbox infrastructure
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Host Infrastructure** - LXD installation and network setup on Hetzner VPS
-- [ ] **Phase 2: Container Creation** - Launch isolated LXC containers with networking
+- [x] **Phase 2: Container Creation** - Launch isolated LXC containers with networking
 - [ ] **Phase 3: Stack Provisioning** - Install complete dev stack in containers
 - [ ] **Phase 4: Management CLI** - User-facing commands for sandbox operations
 
@@ -41,13 +41,13 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can run script with container name and receive a running Ubuntu 24.04 container
   2. Container has TUN device for Tailscale networking
-  3. Container has resource limits applied (4GB memory, 2 CPU cores)
+  3. Container has resource limits applied (4GB soft memory, host CPU cores)
   4. Container has network connectivity and basic packages installed (curl, git, ssh)
   5. Script validates container name format and reports errors for invalid names
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] (Plans to be created during planning phase)
+- [x] 02-01-PLAN.md - Create container creation script with validation, resource limits, TUN device
 
 ### Phase 3: Stack Provisioning
 **Goal**: Script installs complete dev stack and connects container to Tailscale
@@ -88,6 +88,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Host Infrastructure | 1/1 | Complete | 2026-02-01 |
-| 2. Container Creation | 0/TBD | Not started | - |
+| 2. Container Creation | 1/1 | Complete | 2026-02-01 |
 | 3. Stack Provisioning | 0/TBD | Not started | - |
 | 4. Management CLI | 0/TBD | Not started | - |
