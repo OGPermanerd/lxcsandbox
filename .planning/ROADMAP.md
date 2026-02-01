@@ -29,10 +29,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Containers can reach internet through NAT
   4. btrfs storage pool is created and available for container images
   5. UFW firewall allows LXD traffic without blocking container networking
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] (Plans to be created during planning phase)
+- [ ] 01-01-PLAN.md - Rewrite 01-setup-host.sh with full idempotency and safety checks
 
 ### Phase 2: Container Creation
 **Goal**: Script can launch new LXC containers with proper isolation and networking
@@ -83,11 +83,11 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Host Infrastructure | 0/TBD | Not started | - |
+| 1. Host Infrastructure | 0/1 | Planned | - |
 | 2. Container Creation | 0/TBD | Not started | - |
 | 3. Stack Provisioning | 0/TBD | Not started | - |
 | 4. Management CLI | 0/TBD | Not started | - |
