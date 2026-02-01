@@ -5,34 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** Complete isolation between projects for autonomous Claude Code operation
-**Current focus:** v1.0 shipped — ready for next milestone
+**Current focus:** v1.1 Project Migration
 
 ## Current Position
 
-Milestone: v1.0 complete
-Phase: Ready to plan
-Status: Shipped
-Last activity: 2026-02-01 — v1.0 milestone completed
+Milestone: v1.1 (Project Migration)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-01 — Milestone v1.1 started
 
-Progress: ✓ v1.0 shipped
-
-## Milestone v1.0 Summary
-
-**Shipped:** 2026-02-01
-**Phases:** 5
-**Plans:** 5
-**Requirements:** 32/32
-
-**Key deliverables:**
-- 01-setup-host.sh (275 lines)
-- 02-create-container.sh (317 lines)
-- 03-provision-container.sh (583 lines)
-- sandbox.sh (248 lines)
-
-**Archives:**
-- .planning/milestones/v1.0-ROADMAP.md
-- .planning/milestones/v1.0-REQUIREMENTS.md
-- .planning/milestones/v1.0-MILESTONE-AUDIT.md
+Progress: [░░░░░░░░░░] 0%
 
 ## Accumulated Context
 
@@ -40,18 +23,23 @@ Progress: ✓ v1.0 shipped
 
 See PROJECT.md Key Decisions table for full list with outcomes.
 
+New for v1.1:
+- Preserve .env as-is (no interactive secret prompting)
+- Detect migration tools (Prisma, Drizzle, raw SQL) and run automatically
+- Support both local paths and git URLs as source
+
 ### Pending Todos
 
-None — v1.0 complete.
+None yet.
 
 ### Blockers/Concerns
 
-- Integration testing requires LXD host with Tailscale auth key (all scripts verified by code review only)
-- Documentation drift in README.md/CLAUDE.md (tracked in audit)
+- Integration testing requires LXD host with Tailscale auth key (from v1.0)
+- Documentation drift in README.md/CLAUDE.md (tracked in v1.0 audit)
 
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: v1.0 milestone completion
+Stopped at: v1.1 milestone initialization
 Resume file: None
-Next: /gsd:new-milestone for next iteration
+Next: Define requirements and create roadmap
