@@ -30,20 +30,25 @@ show_help() {
     echo "Usage: $0 <command> [arguments]"
     echo ""
     echo "Commands:"
-    echo "  list                    List all sandboxes"
-    echo "  create <name>           Create and provision a new sandbox"
-    echo "  delete <name>           Delete a sandbox"
-    echo "  shell <name>            Open shell in sandbox"
-    echo "  snapshot <name> <label> Create snapshot"
-    echo "  restore <name> <label>  Restore from snapshot"
-    echo "  info <name>             Show sandbox details"
-    echo "  ip <name>               Show Tailscale IP"
+    echo "  create <name> <tailscale-key>  Create and provision new sandbox"
+    echo "  shell <name>                   Open bash shell in container"
+    echo "  list                           List all sandboxes with status"
+    echo "  snapshot <name> [label]        Create named snapshot (default: auto-timestamp)"
+    echo "  restore <name> <label>         Restore from snapshot (auto-backups current state)"
+    echo "  delete <name>                  Delete container (prompts for confirmation)"
+    echo "  info <name>                    Show container details and Tailscale IP"
+    echo ""
+    echo "Exit codes:"
+    echo "  0  Success"
+    echo "  1  Error (invalid arguments, command failed)"
+    echo "  2  User cancelled"
     echo ""
     echo "Examples:"
-    echo "  $0 list"
-    echo "  $0 create relay-dev"
+    echo "  $0 create relay-dev tskey-auth-xxxxx"
     echo "  $0 shell relay-dev"
     echo "  $0 snapshot relay-dev before-migration"
+    echo "  $0 restore relay-dev before-migration"
+    echo "  $0 delete relay-dev"
     echo ""
 }
 
@@ -197,17 +202,6 @@ cmd_info() {
     lxc info "$name" | grep -A 100 "Snapshots:" | tail -n +2 | head -10 || echo "  (none)"
 }
 
-cmd_ip() {
-    local name="${1:-}"
-
-    if [[ -z "$name" ]]; then
-        echo "Usage: $0 ip <name>"
-        exit 1
-    fi
-
-    lxc exec "$name" -- tailscale ip -4
-}
-
 # -------------------------------------------
 # Main
 # -------------------------------------------
@@ -242,15 +236,13 @@ case "$COMMAND" in
     info)
         cmd_info "$@"
         ;;
-    ip)
-        cmd_ip "$@"
-        ;;
     help|--help|-h)
         show_help
         ;;
     *)
         echo "Unknown command: $COMMAND"
-        echo "Run '$0 help' for usage"
+        echo ""
+        show_help
         exit 1
         ;;
 esac
