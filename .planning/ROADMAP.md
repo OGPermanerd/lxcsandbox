@@ -56,15 +56,15 @@ Plans:
 **Goal**: Project dependencies are installed with correct Node version and package manager
 **Depends on**: Phase 6
 **Requirements**: NODE-01, NODE-02, NODE-03, NODE-04, ENV-02
+**Plans:** 1 plan
 **Success Criteria** (what must be TRUE):
   1. Script detects package manager from lockfile (npm/yarn/pnpm) and uses correct install command
   2. Script detects .nvmrc and installs specified Node version if different from default
   3. node_modules directory exists after migration with all dependencies installed
   4. If no .env exists but .env.example does, it is copied as .env
-**Plans**: TBD
 
 Plans:
-- [ ] 07-01: Add package manager detection and dependency installation to migrate script
+- [ ] 07-01-PLAN.md - Add Node.js setup functions to 04-migrate-project.sh
 
 ### Phase 8: Database Integration
 
@@ -108,7 +108,7 @@ Plans:
 | 4. Management CLI | v1.0 | 1/1 | Complete | 2026-02-01 |
 | 5. Tech Debt Cleanup | v1.0 | 1/1 | Complete | 2026-02-01 |
 | 6. Core Transfer | v1.1 | 1/1 | Complete | 2026-02-01 |
-| 7. Node.js Setup | v1.1 | 0/1 | Not started | - |
+| 7. Node.js Setup | v1.1 | 0/1 | Planned | - |
 | 8. Database Integration | v1.1 | 0/1 | Not started | - |
 | 9. CLI Integration | v1.1 | 0/1 | Not started | - |
 
