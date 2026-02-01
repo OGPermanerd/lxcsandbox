@@ -180,3 +180,82 @@ derive_project_name() {
     # From local path (resolve to absolute first)
     basename "$(cd "$source" && pwd)"
 }
+
+# -------------------------------------------
+# Transfer Functions
+# -------------------------------------------
+
+# Clone a git repository inside the container
+clone_git_repository() {
+    local repo_url="$1"
+    local dest_dir="$2"
+    local branch="${3:-}"
+
+    log_info "Cloning repository into container..."
+
+    if [[ -n "$branch" ]]; then
+        log_info "Using branch/tag: $branch"
+        container_exec "git clone --branch '$branch' '$repo_url' '$dest_dir'"
+    else
+        container_exec "git clone '$repo_url' '$dest_dir'"
+    fi
+
+    # Verify clone succeeded
+    if ! lxc exec "$CONTAINER_NAME" -- test -d "$dest_dir/.git"; then
+        log_error "Git clone failed - no .git directory found"
+        return 1
+    fi
+
+    log_info "Repository cloned to $dest_dir"
+}
+
+# Copy local directory to container using tar pipe
+copy_local_directory() {
+    local source_dir="$1"
+    local dest_dir="$2"
+
+    log_info "Copying project files (excluding node_modules, .git)..."
+
+    # Convert to absolute path for tar
+    local abs_source
+    abs_source="$(cd "$source_dir" && pwd)"
+
+    # Create destination directory
+    container_exec "mkdir -p '$dest_dir'"
+
+    # Use tar pipe for reliable transfer with exclusions
+    # Key: --exclude before -cf, and use . as source (not path)
+    tar -C "$abs_source" \
+        --exclude='node_modules' \
+        --exclude='.git' \
+        --exclude='dist' \
+        --exclude='build' \
+        --exclude='.next' \
+        --exclude='.nuxt' \
+        --exclude='.cache' \
+        --exclude='coverage' \
+        -cf - . | lxc exec "$CONTAINER_NAME" -- tar -C "$dest_dir" -xf -
+
+    log_info "Project copied to $CONTAINER_NAME:$dest_dir"
+}
+
+# Copy .env file separately (may be gitignored)
+copy_env_file() {
+    local source_dir="$1"
+    local dest_dir="$2"
+
+    # Convert to absolute path
+    local abs_source
+    abs_source="$(cd "$source_dir" && pwd)"
+
+    if [[ -f "$abs_source/.env" ]]; then
+        log_info "Copying .env file..."
+        lxc file push "$abs_source/.env" "$CONTAINER_NAME$dest_dir/.env"
+        log_info ".env copied to container"
+    else
+        log_warn "No .env file found in source"
+        if [[ -f "$abs_source/.env.example" ]]; then
+            log_info ".env.example exists - will be handled in later phase"
+        fi
+    fi
+}
