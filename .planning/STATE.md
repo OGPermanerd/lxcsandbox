@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 1 of 4 (Host Infrastructure)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-01 — Roadmap created
+Plan: 1 of 1 in current phase
+Status: Phase complete
+Last activity: 2026-02-01 — Completed 01-01-PLAN.md
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 25%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: - min
-- Total execution time: 0.0 hours
+- Total plans completed: 1
+- Average duration: 2 min
+- Total execution time: 0.03 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01-host-infrastructure | 1 | 2min | 2min |
 
 **Recent Trend:**
-- Last 5 plans: None yet
-- Trend: Not established
+- Last 5 plans: 2min
+- Trend: Establishing baseline
 
 *Updated after each plan completion*
 
@@ -46,6 +46,9 @@ Recent decisions affecting current work:
 - Tailscale per container: Provides direct IP access without port mapping
 - Unprivileged containers: Security best practice, requires TUN device passthrough
 - btrfs storage pool: Enables efficient snapshots for rollback
+- Preseed-based LXD config: Use lxd init --preseed for idempotent non-interactive setup (01-01)
+- State detection before preseed: Check storage/network existence to avoid conflicts (01-01)
+- UFW additive-only: Don't auto-enable UFW, only add rules if already active (01-01)
 
 ### Pending Todos
 
@@ -57,6 +60,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-01 (roadmap creation)
-Stopped at: Roadmap and STATE.md created, ready to plan Phase 1
+Last session: 2026-02-01T17:07:29Z
+Stopped at: Completed 01-01-PLAN.md (Host Infrastructure Setup)
 Resume file: None
+Next: Phase 2 - Container Creation
