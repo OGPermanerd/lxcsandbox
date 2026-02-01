@@ -34,8 +34,9 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 # -------------------------------------------
 # Argument Handling
 # -------------------------------------------
-if [[ $# -ne 2 ]]; then
+if [[ $# -lt 2 ]]; then
     echo "Usage: ./03-provision-container.sh <container-name> <tailscale-authkey>"
+    echo "       ./03-provision-container.sh <container-name> --no-tailscale"
     echo ""
     echo "Example: ./03-provision-container.sh relay-dev tskey-auth-xxxxxxxx"
     echo ""
@@ -43,11 +44,19 @@ if [[ $# -ne 2 ]]; then
     echo "  container-name    Name of existing LXC container (created by 02-create-container.sh)"
     echo "  tailscale-authkey Reusable auth key from Tailscale admin console"
     echo "                    Get one at: https://login.tailscale.com/admin/settings/keys"
+    echo ""
+    echo "Options:"
+    echo "  --no-tailscale    Skip Tailscale setup (local development only)"
     exit 1
 fi
 
 CONTAINER_NAME="$1"
 TAILSCALE_AUTHKEY="$2"
+SKIP_TAILSCALE=false
+
+if [[ "$TAILSCALE_AUTHKEY" == "--no-tailscale" ]]; then
+    SKIP_TAILSCALE=true
+fi
 
 # Configuration variables
 NVM_VERSION="v0.40.4"
@@ -70,16 +79,20 @@ fi
 # -------------------------------------------
 # Validate Tailscale Auth Key Format
 # -------------------------------------------
-if [[ ! "$TAILSCALE_AUTHKEY" =~ ^tskey- ]]; then
-    log_error "Invalid Tailscale auth key format"
-    echo ""
-    echo "Auth key must start with 'tskey-'"
-    echo "Get a key at: https://login.tailscale.com/admin/settings/keys"
-    echo ""
-    echo "Recommended settings:"
-    echo "  - Reusable: Yes"
-    echo "  - Ephemeral: Yes (optional, auto-removes device on container delete)"
-    exit 1
+if [[ "$SKIP_TAILSCALE" == false ]]; then
+    if [[ ! "$TAILSCALE_AUTHKEY" =~ ^tskey- ]]; then
+        log_error "Invalid Tailscale auth key format"
+        echo ""
+        echo "Auth key must start with 'tskey-'"
+        echo "Get a key at: https://login.tailscale.com/admin/settings/keys"
+        echo ""
+        echo "Recommended settings:"
+        echo "  - Reusable: Yes"
+        echo "  - Ephemeral: Yes (optional, auto-removes device on container delete)"
+        echo ""
+        echo "Or use --no-tailscale to skip Tailscale setup"
+        exit 1
+    fi
 fi
 
 # -------------------------------------------
@@ -562,7 +575,12 @@ log_info "Provisioning container: $CONTAINER_NAME"
 echo ""
 
 # Install components in dependency order (per RESEARCH.md)
-install_tailscale      # First - provides connectivity verification
+if [[ "$SKIP_TAILSCALE" == true ]]; then
+    log_warn "Skipping Tailscale setup (--no-tailscale)"
+    log_warn "Container will only be accessible via lxc exec or bridge IP"
+else
+    install_tailscale      # First - provides connectivity verification
+fi
 install_postgresql     # Early - apt-based, stable
 install_node           # After apt, provides npm
 install_playwright     # Requires npm

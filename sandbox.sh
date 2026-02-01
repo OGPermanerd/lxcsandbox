@@ -65,13 +65,29 @@ cmd_create() {
     local name="${1:-}"
     local ts_key="${2:-}"
 
-    if [[ -z "$name" || -z "$ts_key" ]]; then
+    if [[ -z "$name" ]]; then
         echo "Usage: $0 create <name> <tailscale-key>"
+        echo "       $0 create <name> --no-tailscale"
+        echo ""
+        echo "Options:"
+        echo "  --no-tailscale    Skip Tailscale setup (local development only)"
         exit 1
     fi
 
+    # Create the container
     "$SCRIPT_DIR/02-create-container.sh" "$name"
-    "$SCRIPT_DIR/03-provision-container.sh" "$name" "$ts_key"
+
+    # Provision based on options
+    if [[ "$ts_key" == "--no-tailscale" ]]; then
+        echo -e "${CYAN}Provisioning without Tailscale...${NC}"
+        "$SCRIPT_DIR/03-provision-container.sh" "$name" "--no-tailscale"
+    elif [[ -n "$ts_key" ]]; then
+        "$SCRIPT_DIR/03-provision-container.sh" "$name" "$ts_key"
+    else
+        echo "Usage: $0 create <name> <tailscale-key>"
+        echo "       $0 create <name> --no-tailscale"
+        exit 1
+    fi
 }
 
 cmd_delete() {

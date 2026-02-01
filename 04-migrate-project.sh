@@ -339,6 +339,18 @@ setup_nodejs_dependencies() {
 
     log_info "=== Node.js Setup ==="
 
+    # Step 0: Check if Node.js is installed
+    if ! container_exec "command -v node" &>/dev/null; then
+        log_error "Node.js is not installed in container"
+        echo ""
+        echo "The container needs to be provisioned first. Run:"
+        echo "  sudo ./03-provision-container.sh $CONTAINER_NAME <tailscale-authkey>"
+        echo ""
+        echo "Or install Node.js manually:"
+        echo "  sudo lxc exec $CONTAINER_NAME -- bash -c 'curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs'"
+        return 1
+    fi
+
     # Step 1: .env.example fallback (before npm install may need env vars)
     copy_env_example_if_needed "$project_dir"
 
