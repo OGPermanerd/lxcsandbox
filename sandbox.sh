@@ -11,6 +11,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Colors
+RED='\033[0;31m'
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
 NC='\033[0m'
@@ -31,6 +32,7 @@ show_help() {
     echo ""
     echo "Commands:"
     echo "  create <name> <tailscale-key>  Create and provision new sandbox"
+    echo "  migrate <name> <source>        Migrate project into sandbox (creates snapshot first)"
     echo "  shell <name>                   Open bash shell in container"
     echo "  list                           List all sandboxes with status"
     echo "  snapshot <name> [label]        Create named snapshot (default: auto-timestamp)"
@@ -45,6 +47,7 @@ show_help() {
     echo ""
     echo "Examples:"
     echo "  $0 create relay-dev tskey-auth-xxxxx"
+    echo "  sudo $0 migrate relay-dev https://github.com/user/project.git"
     echo "  $0 shell relay-dev"
     echo "  $0 snapshot relay-dev before-migration"
     echo "  $0 restore relay-dev before-migration"
@@ -202,6 +205,66 @@ cmd_info() {
     lxc info "$name" | grep -A 100 "Snapshots:" | tail -n +2 | head -10 || echo "  (none)"
 }
 
+cmd_migrate() {
+    local container="${1:-}"
+    local source="${2:-}"
+
+    # Validate arguments
+    if [[ -z "$container" || -z "$source" ]]; then
+        echo "Usage: $0 migrate <container> <source> [--branch <branch>] [--force]"
+        echo ""
+        echo "Migrate a project into a sandbox container."
+        echo ""
+        echo "Arguments:"
+        echo "  container    Name of existing LXC container"
+        echo "  source       Git URL or local directory path"
+        echo ""
+        echo "Options:"
+        echo "  --branch <branch>   Clone specific branch or tag (git sources only)"
+        echo "  --force             Force re-migration if project already exists"
+        echo ""
+        echo "Examples:"
+        echo "  sudo $0 migrate relay-dev https://github.com/user/project.git"
+        echo "  sudo $0 migrate relay-dev /home/user/myproject"
+        echo "  sudo $0 migrate relay-dev https://github.com/user/repo.git --branch main"
+        echo "  sudo $0 migrate relay-dev https://github.com/user/repo.git --force"
+        exit 1
+    fi
+
+    # Root check (04-migrate-project.sh requires root)
+    if [[ $EUID -ne 0 ]]; then
+        echo "Error: migrate command requires root (or sudo)"
+        echo "Usage: sudo $0 migrate <container> <source>"
+        exit 1
+    fi
+
+    # Validate container exists
+    validate_container_exists "$container"
+
+    shift 2  # Remove container and source from args
+
+    # Create pre-migration snapshot
+    local snapshot_label="pre-migrate-$(date +%Y%m%d-%H%M%S)"
+    echo -e "${CYAN}Creating pre-migration snapshot: $snapshot_label${NC}"
+    lxc snapshot "$container" "$snapshot_label"
+
+    # Delegate to migration script (handles file transfer, deps, database)
+    # Pass remaining args for --branch and --force support
+    if ! "$SCRIPT_DIR/04-migrate-project.sh" "$container" "$source" "$@"; then
+        echo ""
+        echo -e "${RED}[ERROR]${NC} Migration failed"
+        echo ""
+        echo "To rollback to pre-migration state:"
+        echo "  $0 restore $container $snapshot_label"
+        exit 1
+    fi
+
+    # Success - show snapshot info
+    echo ""
+    echo -e "${GREEN}Pre-migration snapshot available:${NC} $snapshot_label"
+    echo "To rollback if needed: $0 restore $container $snapshot_label"
+}
+
 # -------------------------------------------
 # Main
 # -------------------------------------------
@@ -220,6 +283,9 @@ case "$COMMAND" in
         ;;
     create)
         cmd_create "$@"
+        ;;
+    migrate)
+        cmd_migrate "$@"
         ;;
     delete)
         cmd_delete "$@"
