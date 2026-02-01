@@ -50,6 +50,21 @@ fi
 CONTAINER_NAME="$1"
 
 # -------------------------------------------
+# LXD Availability Check
+# -------------------------------------------
+if ! command -v lxc &>/dev/null; then
+    log_error "LXD is not installed"
+    echo ""
+    echo "Install LXD first:"
+    echo "  sudo snap install lxd"
+    echo "  sudo lxd init"
+    echo ""
+    echo "Or run the host setup script:"
+    echo "  ./01-setup-host.sh"
+    exit 1
+fi
+
+# -------------------------------------------
 # Container Name Validation (before root check - better UX)
 # -------------------------------------------
 validate_container_name() {
