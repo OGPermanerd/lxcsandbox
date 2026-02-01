@@ -71,16 +71,16 @@ Plans:
 **Goal**: PostgreSQL database is created and migrations are executed
 **Depends on**: Phase 7
 **Requirements**: DB-01, DB-02, DB-03, DB-04, DB-05, DB-06, DB-07, ENV-03, ENV-04
+**Plans:** 1 plan
 **Success Criteria** (what must be TRUE):
   1. Script creates PostgreSQL database with sanitized project name
   2. DATABASE_URL environment variable is generated and appended to .env
   3. Prisma projects have migrations applied via `prisma migrate deploy`
   4. Drizzle projects have schema pushed via `drizzle-kit push`
   5. Raw SQL migrations in migrations/ directory are executed in alphabetical order
-**Plans**: TBD
 
 Plans:
-- [ ] 08-01: Add database creation and migration runner to migrate script
+- [ ] 08-01-PLAN.md — Add database creation and migration execution to migrate script
 
 ### Phase 9: CLI Integration
 
@@ -109,7 +109,7 @@ Plans:
 | 5. Tech Debt Cleanup | v1.0 | 1/1 | Complete | 2026-02-01 |
 | 6. Core Transfer | v1.1 | 1/1 | Complete | 2026-02-01 |
 | 7. Node.js Setup | v1.1 | 1/1 | Complete | 2026-02-01 |
-| 8. Database Integration | v1.1 | 0/1 | Not started | - |
+| 8. Database Integration | v1.1 | 0/1 | Planned | - |
 | 9. CLI Integration | v1.1 | 0/1 | Not started | - |
 
 ## Requirement Coverage
