@@ -29,17 +29,17 @@ Requirements for getting the sandbox infrastructure working end-to-end.
 
 ### Stack Provisioning
 
-- [ ] **PROV-01**: Script accepts container name and Tailscale auth key
-- [ ] **PROV-02**: Script installs Tailscale client in container
-- [ ] **PROV-03**: Script connects Tailscale with provided auth key
-- [ ] **PROV-04**: Script verifies Tailscale IP is assigned
-- [ ] **PROV-05**: Script installs nvm and Node.js 22
-- [ ] **PROV-06**: Script installs npm, yarn, pnpm
-- [ ] **PROV-07**: Script installs PostgreSQL server
-- [ ] **PROV-08**: Script creates dev user/password/database
-- [ ] **PROV-09**: Script installs Playwright with Chromium and Firefox
-- [ ] **PROV-10**: Script installs Claude Code CLI
-- [ ] **PROV-11**: Script configures shell with database env vars and aliases
+- [x] **PROV-01**: Script accepts container name and Tailscale auth key
+- [x] **PROV-02**: Script installs Tailscale client in container
+- [x] **PROV-03**: Script connects Tailscale with provided auth key
+- [x] **PROV-04**: Script verifies Tailscale IP is assigned
+- [x] **PROV-05**: Script installs nvm and Node.js 22
+- [x] **PROV-06**: Script installs npm, yarn, pnpm
+- [x] **PROV-07**: Script installs PostgreSQL server
+- [x] **PROV-08**: Script creates dev user/password/database
+- [x] **PROV-09**: Script installs Playwright with Chromium and Firefox
+- [x] **PROV-10**: Script installs Claude Code CLI
+- [x] **PROV-11**: Script configures shell with database env vars and aliases
 
 ### Management CLI
 
@@ -100,17 +100,17 @@ Deferred to future release after basic workflow is validated.
 | CONT-06 | Phase 2 | Complete |
 | CONT-07 | Phase 2 | Complete |
 | CONT-08 | Phase 2 | Complete |
-| PROV-01 | Phase 3 | Pending |
-| PROV-02 | Phase 3 | Pending |
-| PROV-03 | Phase 3 | Pending |
-| PROV-04 | Phase 3 | Pending |
-| PROV-05 | Phase 3 | Pending |
-| PROV-06 | Phase 3 | Pending |
-| PROV-07 | Phase 3 | Pending |
-| PROV-08 | Phase 3 | Pending |
-| PROV-09 | Phase 3 | Pending |
-| PROV-10 | Phase 3 | Pending |
-| PROV-11 | Phase 3 | Pending |
+| PROV-01 | Phase 3 | Complete |
+| PROV-02 | Phase 3 | Complete |
+| PROV-03 | Phase 3 | Complete |
+| PROV-04 | Phase 3 | Complete |
+| PROV-05 | Phase 3 | Complete |
+| PROV-06 | Phase 3 | Complete |
+| PROV-07 | Phase 3 | Complete |
+| PROV-08 | Phase 3 | Complete |
+| PROV-09 | Phase 3 | Complete |
+| PROV-10 | Phase 3 | Complete |
+| PROV-11 | Phase 3 | Complete |
 | MGMT-01 | Phase 4 | Pending |
 | MGMT-02 | Phase 4 | Pending |
 | MGMT-03 | Phase 4 | Pending |
@@ -126,4 +126,4 @@ Deferred to future release after basic workflow is validated.
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-01 after Phase 2 completion*
+*Last updated: 2026-02-01 after Phase 3 completion*
