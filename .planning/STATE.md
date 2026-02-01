@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** Complete isolation between projects so Claude Code can run autonomously without contaminating other environments
-**Current focus:** Phase 9 - Validation
+**Current focus:** Phase 9 - CLI Integration COMPLETE
 
 ## Current Position
 
 Milestone: v1.1 (Project Migration)
-Phase: 8 of 9 (Database Integration) COMPLETE
+Phase: 9 of 9 (CLI Integration) COMPLETE
 Plan: 1 of 1 in current phase
-Status: Phase complete, ready for Phase 9
-Last activity: 2026-02-01 - Completed 08-01-PLAN.md
+Status: v1.1 milestone complete
+Last activity: 2026-02-01 - Completed 09-01-PLAN.md
 
-Progress: [################....] 88% (8/9 phases complete)
+Progress: [####################] 100% (9/9 phases complete)
 
 ## Accumulated Context
 
@@ -40,6 +40,9 @@ Recent decisions affecting current work:
 - [08-01]: Use --force flag for drizzle-kit push in dev environment
 - [08-01]: Raw SQL migrations sorted alphabetically with find | sort
 - [08-01]: psql -v ON_ERROR_STOP=1 -1 for fail-fast with transaction wrapping
+- [09-01]: Pre-migration snapshot created automatically before any changes
+- [09-01]: Global variables used to track detected values for summary output
+- [09-01]: Rollback instructions shown on both success and failure
 
 ### Pending Todos
 
@@ -52,6 +55,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-01T21:55:03Z
-Stopped at: Completed 08-01-PLAN.md (Database Integration complete)
+Last session: 2026-02-01T22:19:22Z
+Stopped at: Completed 09-01-PLAN.md (CLI Integration complete, v1.1 milestone complete)
 Resume file: None
