@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** Complete isolation between projects so Claude Code can run autonomously without contaminating other environments
-**Current focus:** Phase 7 - Node.js Setup
+**Current focus:** Phase 9 - Validation
 
 ## Current Position
 
 Milestone: v1.1 (Project Migration)
-Phase: 7 of 9 (Node.js Setup)
+Phase: 8 of 9 (Database Integration) COMPLETE
 Plan: 1 of 1 in current phase
-Status: Phase complete
-Last activity: 2026-02-01 - Completed 07-01-PLAN.md
+Status: Phase complete, ready for Phase 9
+Last activity: 2026-02-01 - Completed 08-01-PLAN.md
 
-Progress: [##############......] 77% (7/9 phases complete)
+Progress: [################....] 88% (8/9 phases complete)
 
 ## Accumulated Context
 
@@ -35,6 +35,11 @@ Recent decisions affecting current work:
 - [07-01]: Lockfile detection for package manager (no jq needed)
 - [07-01]: pnpm > yarn > npm precedence for detection
 - [07-01]: Always source nvm.sh in container_exec for non-interactive shells
+- [08-01]: Sanitize DB names (hyphens->underscores, 63-char limit, prefix digit-start with db_)
+- [08-01]: Prisma > Drizzle > SQL detection precedence
+- [08-01]: Use --force flag for drizzle-kit push in dev environment
+- [08-01]: Raw SQL migrations sorted alphabetically with find | sort
+- [08-01]: psql -v ON_ERROR_STOP=1 -1 for fail-fast with transaction wrapping
 
 ### Pending Todos
 
@@ -47,6 +52,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-01T21:35:50Z
-Stopped at: Completed 07-01-PLAN.md (Node.js Setup complete)
+Last session: 2026-02-01T21:55:03Z
+Stopped at: Completed 08-01-PLAN.md (Database Integration complete)
 Resume file: None
