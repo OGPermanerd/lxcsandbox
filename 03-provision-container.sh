@@ -484,7 +484,10 @@ create_claude_md() {
     tailscale_ip=$(container_exec 'tailscale ip -4 2>/dev/null || echo "not connected"')
     container_name="$CONTAINER_NAME"
 
-    container_exec "cat > /root/CLAUDE.md << 'CLAUDE_CONFIG'
+    # Ensure ~/.claude directory exists (created by Claude Code installer)
+    container_exec 'mkdir -p ~/.claude'
+
+    container_exec "cat > ~/.claude/CLAUDE.md << 'CLAUDE_CONFIG'
 # Dev Sandbox Environment
 
 This is an isolated LXC container for development. You have full root access.
@@ -548,7 +551,10 @@ These are pre-configured in ~/.bashrc:
 - Projects are migrated to /root/projects/<project-name>
 CLAUDE_CONFIG"
 
-    log_info "CLAUDE.md created at /root/CLAUDE.md"
+    # Also symlink to home directory for visibility
+    container_exec 'ln -sf ~/.claude/CLAUDE.md ~/CLAUDE.md'
+
+    log_info "CLAUDE.md created at ~/.claude/CLAUDE.md"
 }
 
 # -------------------------------------------
