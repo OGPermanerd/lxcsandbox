@@ -21,6 +21,9 @@
 # - Installs Node version from .nvmrc if present
 # - Runs dependency installation with correct package manager
 # - Copies .env.example to .env if .env is missing
+# - Creates PostgreSQL database with sanitized project name
+# - Runs database migrations (Prisma, Drizzle, or raw SQL)
+# - Appends DATABASE_URL to .env if not present
 # - Destination is always /root/projects/<project-name>
 #
 
@@ -484,6 +487,57 @@ run_sql_migrations() {
 }
 
 # -------------------------------------------
+# Database Setup Orchestration
+# -------------------------------------------
+
+# Main database setup orchestration
+# Creates database, generates DATABASE_URL, runs migrations
+setup_database() {
+    local project_dir="$1"
+    local project_name
+    project_name=$(basename "$project_dir")
+
+    log_info "=== Database Setup ==="
+
+    # Step 1: Sanitize project name for PostgreSQL
+    local db_name
+    db_name=$(sanitize_db_name "$project_name")
+    log_info "Database name: $db_name"
+
+    # Step 2: Create database if not exists
+    create_project_database "$db_name"
+
+    # Step 3: Generate DATABASE_URL
+    local database_url
+    database_url=$(generate_database_url "$db_name")
+
+    # Step 4: Append DATABASE_URL to .env
+    append_database_url_to_env "$project_dir" "$database_url"
+
+    # Step 5: Detect and run migrations
+    local migration_tool
+    migration_tool=$(detect_migration_tool "$project_dir")
+    log_info "Detected migration tool: $migration_tool"
+
+    case "$migration_tool" in
+        prisma)
+            run_prisma_migrations "$project_dir" "$database_url"
+            ;;
+        drizzle)
+            run_drizzle_migrations "$project_dir" "$database_url"
+            ;;
+        sql)
+            run_sql_migrations "$project_dir" "$db_name"
+            ;;
+        none)
+            log_info "No migration tool detected, skipping migrations"
+            ;;
+    esac
+
+    log_info "Database setup complete"
+}
+
+# -------------------------------------------
 # Transfer Functions
 # -------------------------------------------
 
@@ -618,6 +672,9 @@ transfer_project() {
 
     # Install Node.js dependencies
     setup_nodejs_dependencies "$dest_dir"
+
+    # Create database and run migrations
+    setup_database "$dest_dir"
 
     echo ""
     log_info "=== Migration Complete ==="
