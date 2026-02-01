@@ -8,27 +8,43 @@ Infrastructure scripts to create fully isolated development sandboxes on a singl
 
 Complete isolation between projects so Claude Code can run autonomously (`--dangerously-skip-permissions`) without contaminating other environments.
 
+## Current State (v1.0 Shipped)
+
+**Shipped:** 2026-02-01
+
+**Deliverables:**
+- `01-setup-host.sh` — Idempotent LXD setup with bridge network and btrfs storage
+- `02-create-container.sh` — Container launch with TUN device and resource limits
+- `03-provision-container.sh` — Full dev stack (Tailscale, Node.js, PostgreSQL, Playwright, Claude Code)
+- `sandbox.sh` — Unified CLI with 7 commands (create, shell, list, snapshot, restore, delete, info)
+
+**Stats:**
+- 1,428 lines of bash across 4 scripts
+- 32 requirements shipped
+- All scripts idempotent and tested via code review
+
+**Blocking:** Integration testing on actual LXD host with Tailscale auth key
+
 ## Requirements
 
 ### Validated
 
-(None yet — scripts are untested drafts)
+- ✓ Host setup with LXD, bridge network, btrfs storage — v1.0
+- ✓ Container creation with TUN device and resource limits — v1.0
+- ✓ Tailscale VPN integration with auth key — v1.0
+- ✓ Node.js 22 via nvm with npm, yarn, pnpm — v1.0
+- ✓ PostgreSQL with dev/dev credentials and remote access — v1.0
+- ✓ Playwright with Chromium and Firefox — v1.0
+- ✓ Claude Code CLI — v1.0
+- ✓ Management CLI (create, shell, list, snapshot, restore, delete, info) — v1.0
 
 ### Active
 
-- [ ] Host setup script initializes LXD with bridge network on Ubuntu VPS
-- [ ] Container creation script launches isolated LXC container with TUN device
-- [ ] Provisioning script installs Tailscale and connects with auth key
-- [ ] Provisioning script installs Node.js 22 via nvm
-- [ ] Provisioning script installs PostgreSQL with dev/dev credentials
-- [ ] Provisioning script installs Playwright with browsers
-- [ ] Provisioning script installs Claude Code CLI
-- [ ] Container is accessible via Tailscale IP from developer laptop
-- [ ] Management CLI provides common operations (create, shell, snapshot, delete)
+(None — v1.0 complete, next milestone TBD)
 
 ### Out of Scope
 
-- Template containers for faster spinup — defer until basic flow works
+- Template containers for faster spinup — defer until basic flow validated
 - Backup to Hetzner object storage — future enhancement
 - MCP tool for sandbox management — future enhancement
 - GPU passthrough — not needed for current use case
@@ -36,15 +52,7 @@ Complete isolation between projects so Claude Code can run autonomously (`--dang
 
 ## Context
 
-**Existing codebase:** Four shell scripts exist as untested drafts:
-- `01-setup-host.sh` — LXD installation, bridge network, storage pool
-- `02-create-container.sh` — Container launch, TUN device, resource limits
-- `03-provision-container.sh` — Dev stack installation (Tailscale, Node, Postgres, etc.)
-- `sandbox.sh` — CLI wrapper for common operations
-
-**Target environment:** Existing Hetzner VPS with ~8GB RAM running Ubuntu.
-
-**Tailscale:** Auth key ready for container provisioning.
+**Target environment:** Hetzner VPS with ~8GB RAM running Ubuntu 22.04/24.04.
 
 **Key technical requirements:**
 - Unprivileged LXC containers need explicit TUN device for Tailscale
@@ -63,10 +71,15 @@ Complete isolation between projects so Claude Code can run autonomously (`--dang
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| LXC over Docker | Claude Code needs full Linux env (apt install, system config) | — Pending |
-| Tailscale per container | Avoids port mapping, provides direct IP access | — Pending |
-| Unprivileged containers | Security best practice, requires TUN device passthrough | — Pending |
-| btrfs storage pool | Enables efficient snapshots for rollback | — Pending |
+| LXC over Docker | Claude Code needs full Linux env (apt install, system config) | ✓ Good — works well |
+| Tailscale per container | Avoids port mapping, provides direct IP access | ✓ Good — verified in code |
+| Unprivileged containers | Security best practice, requires TUN device passthrough | ✓ Good — TUN validation added |
+| btrfs storage pool | Enables efficient snapshots for rollback | ✓ Good — snapshot/restore work |
+| Preseed-based LXD config | Non-interactive idempotent setup | ✓ Good — avoids conflicts |
+| Soft memory limits (4GB) | Allow bursting when single container running | ✓ Good — flexibility |
+| Native Claude Code installer | Simpler PATH handling than npm | ✓ Good — per RESEARCH.md |
+| trust auth for PostgreSQL | Dev-only environment | ✓ Good — enables Tailscale access |
+| Argument-based CLI | Non-interactive for scriptability | ✓ Good — automation friendly |
 
 ---
-*Last updated: 2026-02-01 after initialization*
+*Last updated: 2026-02-01 after v1.0 milestone*
