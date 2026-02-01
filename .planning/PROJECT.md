@@ -57,6 +57,7 @@ Complete isolation between projects so Claude Code can run autonomously (`--dang
 - **Resources**: ~8GB RAM total, need to fit host + 1-2 containers
 - **Networking**: Tailscale for container access, no Hetzner floating IPs needed
 - **Permissions**: Scripts require root/sudo on host
+- **SACRED: Host access**: Never break SSH or Tailscale access to the host VPS — this is the recovery path if something goes wrong. All LXC changes must be additive, not modify existing host networking.
 
 ## Key Decisions
 
