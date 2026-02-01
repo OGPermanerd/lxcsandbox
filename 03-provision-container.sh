@@ -108,36 +108,23 @@ wait_for_apt_lock() {
     '
 }
 
-# Run a command with a spinner for visual feedback
-run_with_spinner() {
-    local msg="$1"
-    local cmd="$2"
-    local spinstr='|/-\'
-    local delay=0.1
+# Validate TUN device exists in container (required for Tailscale)
+validate_tun_device() {
+    log_info "Checking TUN device availability..."
 
-    echo -n "  $msg..."
-
-    # Run command in background, capture PID
-    eval "$cmd" &>/dev/null &
-    local pid=$!
-
-    while kill -0 $pid 2>/dev/null; do
-        local temp=${spinstr#?}
-        printf "\r  [%c] %s" "$spinstr" "$msg"
-        spinstr=$temp${spinstr%"$temp"}
-        sleep $delay
-    done
-
-    wait $pid
-    local status=$?
-    printf "\r\033[K"  # Clear line
-
-    if [[ $status -eq 0 ]]; then
-        log_info "$msg - done"
-    else
-        log_error "$msg - failed"
-        return $status
+    if ! container_exec 'ls /dev/net/tun &>/dev/null'; then
+        log_error "TUN device not found in container"
+        echo ""
+        echo "The container needs a TUN device for Tailscale."
+        echo "This should have been configured by 02-create-container.sh"
+        echo ""
+        echo "To fix manually:"
+        echo "  lxc config device add $CONTAINER_NAME tun unix-char path=/dev/net/tun"
+        echo "  lxc restart $CONTAINER_NAME"
+        exit 1
     fi
+
+    log_info "TUN device available"
 }
 
 # -------------------------------------------
@@ -180,6 +167,9 @@ wait_for_tailscale() {
 # Install and connect Tailscale
 install_tailscale() {
     log_info "Setting up Tailscale..."
+
+    # Validate TUN device before proceeding
+    validate_tun_device
 
     # Check if already installed and connected
     if container_exec 'command -v tailscale &>/dev/null'; then
