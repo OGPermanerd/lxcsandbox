@@ -255,7 +255,38 @@ EOF
 fi
 
 # -------------------------------------------
-# Step 6: UFW Configuration (HOST-06)
+# Step 6: iptables FORWARD rules for LXD bridge
+# -------------------------------------------
+# Docker's nftables rules set FORWARD policy to DROP, blocking LXD traffic.
+# We need to explicitly allow forwarding for lxdbr0.
+log_info "Configuring iptables FORWARD rules for lxdbr0..."
+
+# Check if rules already exist (idempotent)
+if ! iptables -C FORWARD -i lxdbr0 -j ACCEPT 2>/dev/null; then
+    iptables -A FORWARD -i lxdbr0 -j ACCEPT
+    log_info "Added FORWARD rule for lxdbr0 incoming ✓"
+else
+    log_info "FORWARD rule for lxdbr0 incoming already exists ✓"
+fi
+
+if ! iptables -C FORWARD -o lxdbr0 -j ACCEPT 2>/dev/null; then
+    iptables -A FORWARD -o lxdbr0 -j ACCEPT
+    log_info "Added FORWARD rule for lxdbr0 outgoing ✓"
+else
+    log_info "FORWARD rule for lxdbr0 outgoing already exists ✓"
+fi
+
+# Make rules persistent (if iptables-persistent is available)
+if command -v netfilter-persistent &>/dev/null; then
+    netfilter-persistent save 2>/dev/null || true
+    log_info "iptables rules saved persistently ✓"
+else
+    log_warn "netfilter-persistent not installed - iptables rules won't persist across reboot"
+    log_warn "Install with: apt install iptables-persistent"
+fi
+
+# -------------------------------------------
+# Step 7: UFW Configuration (HOST-06)
 # -------------------------------------------
 log_info "Configuring firewall..."
 
@@ -278,7 +309,7 @@ else
 fi
 
 # -------------------------------------------
-# Step 7: Verification
+# Step 8: Verification
 # -------------------------------------------
 echo ""
 echo "=========================================="
