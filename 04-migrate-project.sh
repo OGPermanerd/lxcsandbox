@@ -339,8 +339,8 @@ setup_nodejs_dependencies() {
 
     log_info "=== Node.js Setup ==="
 
-    # Step 0: Check if Node.js is installed
-    if ! container_exec "command -v node" &>/dev/null; then
+    # Step 0: Check if Node.js is installed (source nvm first for non-interactive shell)
+    if ! container_exec 'export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"; command -v node' &>/dev/null; then
         log_error "Node.js is not installed in container"
         echo ""
         echo "The container needs to be provisioned first. Run:"
