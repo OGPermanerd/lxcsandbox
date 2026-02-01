@@ -386,6 +386,104 @@ append_database_url_to_env() {
 }
 
 # -------------------------------------------
+# Migration Detection and Execution Functions
+# -------------------------------------------
+
+# Detect which migration tool the project uses
+# Returns: "prisma", "drizzle", "sql", or "none"
+# Detection order: Prisma > Drizzle > Raw SQL (most specific first)
+detect_migration_tool() {
+    local project_dir="$1"
+
+    # Prisma: check for prisma/schema.prisma
+    if lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/prisma/schema.prisma"; then
+        echo "prisma"
+        return 0
+    fi
+
+    # Drizzle: check for drizzle.config.* files or drizzle/ directory
+    if lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/drizzle.config.ts" || \
+       lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/drizzle.config.js" || \
+       lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/drizzle.config.mjs" || \
+       lxc exec "$CONTAINER_NAME" -- test -d "$project_dir/drizzle"; then
+        echo "drizzle"
+        return 0
+    fi
+
+    # Raw SQL: check for migrations/ directory with .sql files
+    if lxc exec "$CONTAINER_NAME" -- test -d "$project_dir/migrations"; then
+        local sql_count
+        sql_count=$(lxc exec "$CONTAINER_NAME" -- bash -c "find '$project_dir/migrations' -maxdepth 1 -name '*.sql' -type f 2>/dev/null | wc -l")
+        if [[ "$sql_count" -gt 0 ]]; then
+            echo "sql"
+            return 0
+        fi
+    fi
+
+    echo "none"
+}
+
+# Run Prisma migrations inside container
+# Requires: prisma installed via npm/pnpm/yarn (from Phase 7)
+run_prisma_migrations() {
+    local project_dir="$1"
+    local database_url="$2"
+
+    log_info "Running Prisma migrations..."
+
+    container_exec "
+        export NVM_DIR=\"\$HOME/.nvm\"
+        [ -s \"\$NVM_DIR/nvm.sh\" ] && \\. \"\$NVM_DIR/nvm.sh\"
+        cd '$project_dir'
+        DATABASE_URL='$database_url' npx prisma migrate deploy
+    "
+
+    log_info "Prisma migrations complete"
+}
+
+# Run Drizzle schema push inside container
+# Requires: drizzle-kit installed via npm/pnpm/yarn (from Phase 7)
+# Uses --force to auto-accept data-loss statements (dev environment)
+run_drizzle_migrations() {
+    local project_dir="$1"
+    local database_url="$2"
+
+    log_info "Running Drizzle schema push..."
+
+    container_exec "
+        export NVM_DIR=\"\$HOME/.nvm\"
+        [ -s \"\$NVM_DIR/nvm.sh\" ] && \\. \"\$NVM_DIR/nvm.sh\"
+        cd '$project_dir'
+        DATABASE_URL='$database_url' npx drizzle-kit push --force
+    "
+
+    log_info "Drizzle schema push complete"
+}
+
+# Run raw SQL migrations inside container
+# Executes .sql files in alphabetical order from migrations/ directory
+# Uses psql with ON_ERROR_STOP=1 and -1 for transaction wrapping
+run_sql_migrations() {
+    local project_dir="$1"
+    local db_name="$2"
+
+    log_info "Running raw SQL migrations..."
+
+    container_exec "
+        MIGRATIONS_DIR='$project_dir/migrations'
+
+        # Find and sort .sql files alphabetically
+        find \"\$MIGRATIONS_DIR\" -maxdepth 1 -name '*.sql' -type f | sort | while read -r sql_file; do
+            filename=\$(basename \"\$sql_file\")
+            echo \"Applying: \$filename\"
+            sudo -u postgres psql -d '$db_name' -v ON_ERROR_STOP=1 -1 -f \"\$sql_file\"
+        done
+    "
+
+    log_info "SQL migrations complete"
+}
+
+# -------------------------------------------
 # Transfer Functions
 # -------------------------------------------
 
