@@ -140,8 +140,70 @@ run_with_spinner() {
     fi
 }
 
-# Placeholder for main execution (to be added in subsequent tasks)
-# install_tailscale
+# -------------------------------------------
+# Tailscale Installation (PROV-02, PROV-03, PROV-04)
+# -------------------------------------------
+
+# Wait for Tailscale to establish connection
+wait_for_tailscale() {
+    local timeout=60
+    local elapsed=0
+    local spinstr='|/-\'
+
+    echo -n "  Waiting for Tailscale connection..."
+
+    while [[ $elapsed -lt $timeout ]]; do
+        if container_exec 'tailscale status 2>/dev/null | grep -q "^100\."'; then
+            printf "\r\033[K"  # Clear line
+            local ts_ip
+            ts_ip=$(container_exec 'tailscale ip -4')
+            log_info "Tailscale connected: $ts_ip"
+            return 0
+        fi
+
+        local temp=${spinstr#?}
+        printf "\r  [%c] Waiting for Tailscale... (%ds/%ds)" "$spinstr" "$elapsed" "$timeout"
+        spinstr=$temp${spinstr%"$temp"}
+
+        sleep 1
+        ((elapsed++))
+    done
+
+    printf "\r\033[K"  # Clear line
+    log_error "Tailscale connection timed out after ${timeout}s"
+    echo "Container left running for debugging:"
+    echo "  lxc exec $CONTAINER_NAME -- tailscale status"
+    echo "  lxc exec $CONTAINER_NAME -- journalctl -u tailscaled"
+    return 1
+}
+
+# Install and connect Tailscale
+install_tailscale() {
+    log_info "Setting up Tailscale..."
+
+    # Check if already installed and connected
+    if container_exec 'command -v tailscale &>/dev/null'; then
+        if container_exec 'tailscale status 2>/dev/null | grep -q "^100\."'; then
+            local ts_ip
+            ts_ip=$(container_exec 'tailscale ip -4')
+            log_info "Tailscale already connected: $ts_ip"
+            return 0
+        fi
+        log_info "Tailscale installed but not connected, connecting..."
+    else
+        log_info "Installing Tailscale..."
+        container_exec 'curl -fsSL https://tailscale.com/install.sh | sh'
+    fi
+
+    # Connect with authkey
+    log_info "Connecting to Tailscale..."
+    container_exec "tailscale up --authkey='$TAILSCALE_AUTHKEY'"
+
+    # Wait for connection with timeout (60s per CONTEXT.md)
+    wait_for_tailscale
+}
+
+# Placeholder for remaining installation functions
 # install_postgresql
 # install_node
 # install_playwright
