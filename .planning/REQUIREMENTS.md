@@ -43,13 +43,13 @@ Requirements for getting the sandbox infrastructure working end-to-end.
 
 ### Management CLI
 
-- [ ] **MGMT-01**: sandbox.sh create command runs 02 + 03 scripts
-- [ ] **MGMT-02**: sandbox.sh shell command opens bash in container
-- [ ] **MGMT-03**: sandbox.sh list command shows all containers
-- [ ] **MGMT-04**: sandbox.sh snapshot command creates named snapshot
-- [ ] **MGMT-05**: sandbox.sh restore command restores from snapshot
-- [ ] **MGMT-06**: sandbox.sh delete command removes container with confirmation
-- [ ] **MGMT-07**: sandbox.sh info command shows container details and IPs
+- [x] **MGMT-01**: sandbox.sh create command runs 02 + 03 scripts
+- [x] **MGMT-02**: sandbox.sh shell command opens bash in container
+- [x] **MGMT-03**: sandbox.sh list command shows all containers
+- [x] **MGMT-04**: sandbox.sh snapshot command creates named snapshot
+- [x] **MGMT-05**: sandbox.sh restore command restores from snapshot
+- [x] **MGMT-06**: sandbox.sh delete command removes container with confirmation
+- [x] **MGMT-07**: sandbox.sh info command shows container details and IPs
 
 ## v2 Requirements
 
@@ -111,13 +111,13 @@ Deferred to future release after basic workflow is validated.
 | PROV-09 | Phase 3 | Complete |
 | PROV-10 | Phase 3 | Complete |
 | PROV-11 | Phase 3 | Complete |
-| MGMT-01 | Phase 4 | Pending |
-| MGMT-02 | Phase 4 | Pending |
-| MGMT-03 | Phase 4 | Pending |
-| MGMT-04 | Phase 4 | Pending |
-| MGMT-05 | Phase 4 | Pending |
-| MGMT-06 | Phase 4 | Pending |
-| MGMT-07 | Phase 4 | Pending |
+| MGMT-01 | Phase 4 | Complete |
+| MGMT-02 | Phase 4 | Complete |
+| MGMT-03 | Phase 4 | Complete |
+| MGMT-04 | Phase 4 | Complete |
+| MGMT-05 | Phase 4 | Complete |
+| MGMT-06 | Phase 4 | Complete |
+| MGMT-07 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 32 total
@@ -126,4 +126,4 @@ Deferred to future release after basic workflow is validated.
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-01 after Phase 3 completion*
+*Last updated: 2026-02-01 after Phase 4 completion*
