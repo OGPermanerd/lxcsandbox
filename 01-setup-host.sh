@@ -258,31 +258,46 @@ fi
 # Step 6: iptables FORWARD rules for LXD bridge
 # -------------------------------------------
 # Docker's nftables rules set FORWARD policy to DROP, blocking LXD traffic.
-# We need to explicitly allow forwarding for lxdbr0.
+# We create a dedicated LXD chain and insert it at the top of FORWARD.
 log_info "Configuring iptables FORWARD rules for lxdbr0..."
 
-# Check if rules already exist (idempotent)
-if ! iptables -C FORWARD -i lxdbr0 -j ACCEPT 2>/dev/null; then
-    iptables -A FORWARD -i lxdbr0 -j ACCEPT
-    log_info "Added FORWARD rule for lxdbr0 incoming ✓"
-else
-    log_info "FORWARD rule for lxdbr0 incoming already exists ✓"
+# Create LXD-FORWARD chain if it doesn't exist
+if ! iptables -L LXD-FORWARD -n &>/dev/null; then
+    iptables -N LXD-FORWARD
+    log_info "Created LXD-FORWARD chain ✓"
 fi
 
-if ! iptables -C FORWARD -o lxdbr0 -j ACCEPT 2>/dev/null; then
-    iptables -A FORWARD -o lxdbr0 -j ACCEPT
-    log_info "Added FORWARD rule for lxdbr0 outgoing ✓"
+# Ensure LXD-FORWARD chain has our rules (flush and re-add for idempotency)
+iptables -F LXD-FORWARD
+iptables -A LXD-FORWARD -i lxdbr0 -j ACCEPT
+iptables -A LXD-FORWARD -o lxdbr0 -j ACCEPT
+log_info "Added FORWARD rules for lxdbr0 ✓"
+
+# Insert jump to LXD-FORWARD at top of FORWARD chain (if not already there)
+if ! iptables -C FORWARD -j LXD-FORWARD 2>/dev/null; then
+    iptables -I FORWARD 1 -j LXD-FORWARD
+    log_info "Inserted LXD-FORWARD jump at top of FORWARD chain ✓"
 else
-    log_info "FORWARD rule for lxdbr0 outgoing already exists ✓"
+    # Move to top if it exists but isn't first
+    iptables -D FORWARD -j LXD-FORWARD 2>/dev/null || true
+    iptables -I FORWARD 1 -j LXD-FORWARD
+    log_info "LXD-FORWARD jump positioned at top of FORWARD chain ✓"
 fi
 
-# Make rules persistent (if iptables-persistent is available)
+# Make rules persistent
 if command -v netfilter-persistent &>/dev/null; then
     netfilter-persistent save 2>/dev/null || true
     log_info "iptables rules saved persistently ✓"
 else
-    log_warn "netfilter-persistent not installed - iptables rules won't persist across reboot"
-    log_warn "Install with: apt install iptables-persistent"
+    # Install iptables-persistent non-interactively
+    log_info "Installing iptables-persistent for rule persistence..."
+    DEBIAN_FRONTEND=noninteractive apt-get install -y iptables-persistent >/dev/null 2>&1 || true
+    if command -v netfilter-persistent &>/dev/null; then
+        netfilter-persistent save 2>/dev/null || true
+        log_info "iptables rules saved persistently ✓"
+    else
+        log_warn "Could not install iptables-persistent - rules won't persist across reboot"
+    fi
 fi
 
 # -------------------------------------------
@@ -350,6 +365,14 @@ if [[ "$NAT_ENABLED" == "true" ]]; then
     log_info "✓ NAT enabled on lxdbr0"
 else
     log_error "✗ NAT not enabled on lxdbr0"
+    VERIFICATION_FAILED=true
+fi
+
+# Check iptables FORWARD rules
+if iptables -L LXD-FORWARD -n &>/dev/null && iptables -C FORWARD -j LXD-FORWARD 2>/dev/null; then
+    log_info "✓ iptables FORWARD rules configured for lxdbr0"
+else
+    log_error "✗ iptables FORWARD rules missing for lxdbr0"
     VERIFICATION_FAILED=true
 fi
 
