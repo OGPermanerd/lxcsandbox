@@ -75,10 +75,10 @@ Plans:
   3. User can create named snapshots and restore from them
   4. User can delete containers with confirmation prompt to prevent accidents
   5. sandbox.sh info command shows Tailscale IP and connection instructions
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] (Plans to be created during planning phase)
+- [ ] 04-01-PLAN.md - Update sandbox.sh with all CLI commands per CONTEXT.md decisions
 
 ## Progress
 
@@ -90,4 +90,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 1. Host Infrastructure | 1/1 | Complete | 2026-02-01 |
 | 2. Container Creation | 1/1 | Complete | 2026-02-01 |
 | 3. Stack Provisioning | 1/1 | Complete | 2026-02-01 |
-| 4. Management CLI | 0/TBD | Not started | - |
+| 4. Management CLI | 0/1 | Not started | - |
