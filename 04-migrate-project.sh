@@ -182,6 +182,103 @@ derive_project_name() {
 }
 
 # -------------------------------------------
+# Node.js Setup Functions
+# -------------------------------------------
+
+# Detect package manager from lockfile
+# Precedence: pnpm > yarn > npm (most specific wins)
+detect_package_manager() {
+    local project_dir="$1"
+
+    # Check inside container
+    if lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/pnpm-lock.yaml"; then
+        echo "pnpm"
+    elif lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/yarn.lock"; then
+        echo "yarn"
+    elif lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/package-lock.json"; then
+        echo "npm"
+    else
+        # No lockfile - default to npm
+        echo "npm"
+    fi
+}
+
+# Set up Node version from .nvmrc if present
+setup_node_version() {
+    local project_dir="$1"
+
+    # Check if .nvmrc exists
+    if lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/.nvmrc"; then
+        log_info "Found .nvmrc, installing required Node version..."
+        container_exec "
+            export NVM_DIR=\"\$HOME/.nvm\"
+            [ -s \"\$NVM_DIR/nvm.sh\" ] && \\. \"\$NVM_DIR/nvm.sh\"
+            cd '$project_dir'
+            nvm install
+            nvm use
+            echo \"Using Node \$(node --version)\"
+        "
+    else
+        log_info "No .nvmrc found, using default Node version"
+        container_exec "
+            export NVM_DIR=\"\$HOME/.nvm\"
+            [ -s \"\$NVM_DIR/nvm.sh\" ] && \\. \"\$NVM_DIR/nvm.sh\"
+            echo \"Using Node \$(node --version)\"
+        "
+    fi
+}
+
+# Install dependencies with the appropriate package manager
+install_dependencies() {
+    local project_dir="$1"
+    local package_manager="$2"
+
+    container_exec "
+        export NVM_DIR=\"\$HOME/.nvm\"
+        [ -s \"\$NVM_DIR/nvm.sh\" ] && \\. \"\$NVM_DIR/nvm.sh\"
+        cd '$project_dir'
+
+        case '$package_manager' in
+            pnpm)
+                pnpm install
+                ;;
+            yarn)
+                yarn install
+                ;;
+            npm)
+                npm install
+                ;;
+        esac
+    "
+
+    # Verify node_modules was created
+    if ! lxc exec "$CONTAINER_NAME" -- test -d "$project_dir/node_modules"; then
+        log_error "node_modules not created - installation may have failed"
+        return 1
+    fi
+
+    log_info "Dependencies installed successfully"
+}
+
+# Copy .env.example to .env if .env doesn't exist
+copy_env_example_if_needed() {
+    local project_dir="$1"
+
+    # Check if .env does NOT exist AND .env.example exists
+    if ! lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/.env"; then
+        if lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/.env.example"; then
+            log_info "No .env found, copying from .env.example..."
+            container_exec "cp '$project_dir/.env.example' '$project_dir/.env'"
+            log_warn ".env created from .env.example - review and update values"
+        else
+            log_warn "No .env or .env.example found"
+        fi
+    else
+        log_info ".env file exists"
+    fi
+}
+
+# -------------------------------------------
 # Transfer Functions
 # -------------------------------------------
 
