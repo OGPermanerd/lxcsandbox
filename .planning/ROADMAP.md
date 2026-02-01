@@ -28,7 +28,7 @@ See: .planning/milestones/v1.0-ROADMAP.md
 
 **Milestone Goal:** Migrate existing Node.js projects into isolated LXC sandboxes with automated environment setup.
 
-- [ ] **Phase 6: Core Transfer** - Get project files into containers via git clone or local copy
+- [x] **Phase 6: Core Transfer** - Get project files into containers via git clone or local copy
 - [ ] **Phase 7: Node.js Setup** - Install correct Node version and project dependencies
 - [ ] **Phase 8: Database Integration** - Create PostgreSQL database and run migrations
 - [ ] **Phase 9: CLI Integration** - Polish sandbox.sh migrate command and user experience
@@ -49,7 +49,7 @@ See: .planning/milestones/v1.0-ROADMAP.md
   5. .env file from source is copied to container project directory
 
 Plans:
-- [ ] 06-01-PLAN.md - Create 04-migrate-project.sh with source detection and file transfer
+- [x] 06-01-PLAN.md - Create 04-migrate-project.sh with source detection and file transfer
 
 ### Phase 7: Node.js Setup
 
@@ -107,7 +107,7 @@ Plans:
 | 3. Stack Provisioning | v1.0 | 1/1 | Complete | 2026-02-01 |
 | 4. Management CLI | v1.0 | 1/1 | Complete | 2026-02-01 |
 | 5. Tech Debt Cleanup | v1.0 | 1/1 | Complete | 2026-02-01 |
-| 6. Core Transfer | v1.1 | 0/1 | Planned | - |
+| 6. Core Transfer | v1.1 | 1/1 | Complete | 2026-02-01 |
 | 7. Node.js Setup | v1.1 | 0/1 | Not started | - |
 | 8. Database Integration | v1.1 | 0/1 | Not started | - |
 | 9. CLI Integration | v1.1 | 0/1 | Not started | - |
