@@ -30,7 +30,7 @@ See: .planning/milestones/v1.0-ROADMAP.md
 
 - [x] **Phase 6: Core Transfer** - Get project files into containers via git clone or local copy
 - [x] **Phase 7: Node.js Setup** - Install correct Node version and project dependencies
-- [ ] **Phase 8: Database Integration** - Create PostgreSQL database and run migrations
+- [x] **Phase 8: Database Integration** - Create PostgreSQL database and run migrations
 - [ ] **Phase 9: CLI Integration** - Polish sandbox.sh migrate command and user experience
 
 ## Phase Details
@@ -80,7 +80,7 @@ Plans:
   5. Raw SQL migrations in migrations/ directory are executed in alphabetical order
 
 Plans:
-- [ ] 08-01-PLAN.md — Add database creation and migration execution to migrate script
+- [x] 08-01-PLAN.md — Add database creation and migration execution to migrate script
 
 ### Phase 9: CLI Integration
 
@@ -109,7 +109,7 @@ Plans:
 | 5. Tech Debt Cleanup | v1.0 | 1/1 | Complete | 2026-02-01 |
 | 6. Core Transfer | v1.1 | 1/1 | Complete | 2026-02-01 |
 | 7. Node.js Setup | v1.1 | 1/1 | Complete | 2026-02-01 |
-| 8. Database Integration | v1.1 | 0/1 | Planned | - |
+| 8. Database Integration | v1.1 | 1/1 | Complete | 2026-02-01 |
 | 9. CLI Integration | v1.1 | 0/1 | Not started | - |
 
 ## Requirement Coverage

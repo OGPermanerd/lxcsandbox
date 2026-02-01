@@ -27,19 +27,19 @@ Requirements for migrating existing projects into containers with full environme
 
 - [x] **ENV-01**: Script copies .env file from source to container
 - [x] **ENV-02**: Script falls back to .env.example if .env missing
-- [ ] **ENV-03**: Script generates DATABASE_URL for PostgreSQL connection
-- [ ] **ENV-04**: Script appends DATABASE_URL to .env if not present
+- [x] **ENV-03**: Script generates DATABASE_URL for PostgreSQL connection
+- [x] **ENV-04**: Script appends DATABASE_URL to .env if not present
 - [x] **ENV-05**: Script preserves existing environment variables unchanged
 
 ### Database Integration (DB)
 
-- [ ] **DB-01**: Script creates PostgreSQL database with sanitized project name
-- [ ] **DB-02**: Script detects Prisma by presence of prisma/ directory
-- [ ] **DB-03**: Script detects Drizzle by presence of drizzle/ or drizzle.config.*
-- [ ] **DB-04**: Script runs `npx prisma migrate deploy` for Prisma projects
-- [ ] **DB-05**: Script runs `npx drizzle-kit push` for Drizzle projects
-- [ ] **DB-06**: Script detects raw SQL migrations in migrations/ directory
-- [ ] **DB-07**: Script runs raw SQL migrations in alphabetical order
+- [x] **DB-01**: Script creates PostgreSQL database with sanitized project name
+- [x] **DB-02**: Script detects Prisma by presence of prisma/ directory
+- [x] **DB-03**: Script detects Drizzle by presence of drizzle/ or drizzle.config.*
+- [x] **DB-04**: Script runs `npx prisma migrate deploy` for Prisma projects
+- [x] **DB-05**: Script runs `npx drizzle-kit push` for Drizzle projects
+- [x] **DB-06**: Script detects raw SQL migrations in migrations/ directory
+- [x] **DB-07**: Script runs raw SQL migrations in alphabetical order
 
 ### CLI Integration (CLI)
 
@@ -65,16 +65,16 @@ Requirements for migrating existing projects into containers with full environme
 | NODE-04 | Phase 7 | Must Have | Complete |
 | ENV-01 | Phase 6 | Must Have | Complete |
 | ENV-02 | Phase 7 | Should Have | Complete |
-| ENV-03 | Phase 8 | Must Have | Pending |
-| ENV-04 | Phase 8 | Must Have | Pending |
+| ENV-03 | Phase 8 | Must Have | Complete |
+| ENV-04 | Phase 8 | Must Have | Complete |
 | ENV-05 | Phase 6 | Must Have | Complete |
-| DB-01 | Phase 8 | Must Have | Pending |
-| DB-02 | Phase 8 | Must Have | Pending |
-| DB-03 | Phase 8 | Must Have | Pending |
-| DB-04 | Phase 8 | Must Have | Pending |
-| DB-05 | Phase 8 | Must Have | Pending |
-| DB-06 | Phase 8 | Should Have | Pending |
-| DB-07 | Phase 8 | Should Have | Pending |
+| DB-01 | Phase 8 | Must Have | Complete |
+| DB-02 | Phase 8 | Must Have | Complete |
+| DB-03 | Phase 8 | Must Have | Complete |
+| DB-04 | Phase 8 | Must Have | Complete |
+| DB-05 | Phase 8 | Must Have | Complete |
+| DB-06 | Phase 8 | Should Have | Complete |
+| DB-07 | Phase 8 | Should Have | Complete |
 | CLI-01 | Phase 9 | Must Have | Pending |
 | CLI-02 | Phase 9 | Must Have | Pending |
 | CLI-03 | Phase 9 | Must Have | Pending |
