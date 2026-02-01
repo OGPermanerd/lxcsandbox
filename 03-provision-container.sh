@@ -288,8 +288,78 @@ install_postgresql() {
     configure_pg_remote_access
 }
 
+# -------------------------------------------
+# Node.js Installation (PROV-05, PROV-06)
+# -------------------------------------------
+
+# Install nvm, Node.js, and enable corepack for yarn/pnpm
+install_node() {
+    log_info "Setting up Node.js environment..."
+
+    # Check if nvm already installed
+    if container_exec '[ -s "$HOME/.nvm/nvm.sh" ]'; then
+        log_info "nvm already installed"
+    else
+        log_info "Installing nvm $NVM_VERSION..."
+        container_exec "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/$NVM_VERSION/install.sh | bash"
+    fi
+
+    # Source nvm and check/install Node.js
+    # CRITICAL: Must source nvm.sh for non-interactive shell
+    container_exec '
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+        if nvm ls '"$NODE_VERSION"' &>/dev/null; then
+            echo "Node.js '"$NODE_VERSION"' already installed"
+        else
+            echo "Installing Node.js '"$NODE_VERSION"'..."
+            nvm install '"$NODE_VERSION"'
+        fi
+
+        nvm alias default '"$NODE_VERSION"'
+        nvm use default
+    '
+
+    # Verify installation
+    local node_version
+    node_version=$(container_exec '
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        node --version
+    ')
+    log_info "Node.js installed: $node_version"
+
+    # Enable corepack for yarn and pnpm
+    log_info "Enabling corepack for yarn and pnpm..."
+    container_exec '
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        corepack enable
+    '
+
+    # Verify package managers
+    local npm_ver yarn_ver pnpm_ver
+    npm_ver=$(container_exec '
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        npm --version
+    ')
+    yarn_ver=$(container_exec '
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        yarn --version
+    ')
+    pnpm_ver=$(container_exec '
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        pnpm --version
+    ')
+
+    log_info "Package managers: npm $npm_ver, yarn $yarn_ver, pnpm $pnpm_ver"
+}
+
 # Placeholder for remaining installation functions
-# install_node
 # install_playwright
 # install_claude_code
 # configure_shell
