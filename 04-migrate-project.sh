@@ -387,7 +387,7 @@ copy_env_file() {
     else
         log_warn "No .env file found in source"
         if [[ -f "$abs_source/.env.example" ]]; then
-            log_info ".env.example exists - will be handled in later phase"
+            log_info ".env.example exists - will be copied during Node.js setup"
         fi
     fi
 }
