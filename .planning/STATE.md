@@ -4,18 +4,18 @@
 
 See: .planning/PROJECT.md (updated 2026-02-01)
 
-**Core value:** Complete isolation between projects for autonomous Claude Code operation
-**Current focus:** v1.1 Project Migration
+**Core value:** Complete isolation between projects so Claude Code can run autonomously without contaminating other environments
+**Current focus:** Phase 6 - Core Transfer
 
 ## Current Position
 
 Milestone: v1.1 (Project Migration)
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-01 — Milestone v1.1 started
+Phase: 6 of 9 (Core Transfer)
+Plan: 1 of 1 in current phase
+Status: Phase complete
+Last activity: 2026-02-01 — Completed 06-01-PLAN.md
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [############........] 66% (6/9 phases complete)
 
 ## Accumulated Context
 
@@ -23,10 +23,15 @@ Progress: [░░░░░░░░░░] 0%
 
 See PROJECT.md Key Decisions table for full list with outcomes.
 
-New for v1.1:
-- Preserve .env as-is (no interactive secret prompting)
-- Detect migration tools (Prisma, Drizzle, raw SQL) and run automatically
-- Support both local paths and git URLs as source
+Recent decisions affecting current work:
+
+- [v1.0]: Argument-based CLI for scriptability (affects migrate command design)
+- [v1.0]: trust auth for PostgreSQL (enables easy DATABASE_URL setup)
+- [Research]: Always exclude node_modules during transfer (prevents architecture mismatch)
+- [Research]: Use prisma migrate deploy (not dev) for non-interactive context
+- [06-01]: Tar pipe over lxc file push -r for directories (handles symlinks, permissions)
+- [06-01]: Clone git repos directly inside container (no double transfer)
+- [06-01]: Extended exclusions: dist, build, .next, .nuxt, .cache, coverage
 
 ### Pending Todos
 
@@ -34,12 +39,11 @@ None yet.
 
 ### Blockers/Concerns
 
-- Integration testing requires LXD host with Tailscale auth key (from v1.0)
-- Documentation drift in README.md/CLAUDE.md (tracked in v1.0 audit)
+- [v1.0]: Integration testing on actual LXD host blocked by hardware availability
+- [Research]: jq needs to be added to container packages for package.json parsing
 
 ## Session Continuity
 
-Last session: 2026-02-01
-Stopped at: v1.1 milestone initialization
+Last session: 2026-02-01T21:15:11Z
+Stopped at: Completed 06-01-PLAN.md (Core Transfer complete)
 Resume file: None
-Next: Define requirements and create roadmap
