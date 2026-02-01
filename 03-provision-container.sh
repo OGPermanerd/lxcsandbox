@@ -203,8 +203,92 @@ install_tailscale() {
     wait_for_tailscale
 }
 
+# -------------------------------------------
+# PostgreSQL Installation (PROV-07, PROV-08)
+# -------------------------------------------
+
+# Create PostgreSQL user and database
+create_pg_user_db() {
+    log_info "Creating PostgreSQL user and database..."
+
+    # Create user if not exists
+    container_exec "sudo -u postgres psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname='$PG_USER'\" | grep -q 1 || sudo -u postgres createuser $PG_USER"
+
+    # Set password
+    container_exec "sudo -u postgres psql -c \"ALTER USER $PG_USER WITH PASSWORD '$PG_PASS';\""
+
+    # Create database if not exists
+    container_exec "sudo -u postgres psql -tAc \"SELECT 1 FROM pg_database WHERE datname='$PG_DB'\" | grep -q 1 || sudo -u postgres createdb -O $PG_USER $PG_DB"
+
+    # Install pgcrypto extension (per RESEARCH.md recommendation for gen_random_uuid)
+    container_exec "sudo -u postgres psql -d $PG_DB -c 'CREATE EXTENSION IF NOT EXISTS pgcrypto;'"
+
+    log_info "PostgreSQL user '$PG_USER', database '$PG_DB' ready"
+}
+
+# Configure PostgreSQL for remote access via Tailscale
+configure_pg_remote_access() {
+    log_info "Configuring PostgreSQL for remote access..."
+
+    container_exec '
+        # Find PostgreSQL version directory
+        PG_VERSION=$(ls /etc/postgresql/)
+        PG_CONF="/etc/postgresql/$PG_VERSION/main/postgresql.conf"
+        PG_HBA="/etc/postgresql/$PG_VERSION/main/pg_hba.conf"
+
+        # Listen on all interfaces (for Tailscale access)
+        sed -i "s/#listen_addresses = '"'"'localhost'"'"'/listen_addresses = '"'"'*'"'"'/" "$PG_CONF"
+
+        # Check if trust rules already exist
+        if ! grep -q "host.*all.*all.*0.0.0.0/0.*trust" "$PG_HBA"; then
+            # Add trust authentication for all connections (dev only!)
+            echo "# Allow all connections with trust (dev environment)" >> "$PG_HBA"
+            echo "host    all    all    0.0.0.0/0    trust" >> "$PG_HBA"
+            echo "host    all    all    ::0/0        trust" >> "$PG_HBA"
+        fi
+
+        # Restart PostgreSQL to apply changes
+        systemctl restart postgresql
+    '
+
+    log_info "PostgreSQL configured for remote access"
+}
+
+# Install and configure PostgreSQL
+install_postgresql() {
+    log_info "Setting up PostgreSQL..."
+
+    # Check if already installed
+    if container_exec 'dpkg-query -W -f="${Status}" postgresql 2>/dev/null | grep -q "install ok installed"'; then
+        log_info "PostgreSQL already installed"
+
+        # Verify user/db exist
+        if container_exec "sudo -u postgres psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname='$PG_USER'\" | grep -q 1"; then
+            log_info "PostgreSQL user '$PG_USER' exists"
+        else
+            create_pg_user_db
+        fi
+        return 0
+    fi
+
+    wait_for_apt_lock
+
+    log_info "Installing PostgreSQL..."
+    container_exec '
+        DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+            postgresql \
+            postgresql-contrib
+    '
+
+    # Wait for PostgreSQL to start
+    container_exec 'systemctl enable postgresql && systemctl start postgresql'
+    sleep 2
+
+    create_pg_user_db
+    configure_pg_remote_access
+}
+
 # Placeholder for remaining installation functions
-# install_postgresql
 # install_node
 # install_playwright
 # install_claude_code
