@@ -314,6 +314,78 @@ setup_nodejs_dependencies() {
 }
 
 # -------------------------------------------
+# Database Setup Functions
+# -------------------------------------------
+
+# Sanitize project name for PostgreSQL identifier
+# - Lowercase, replace hyphens/dots with underscores
+# - Remove invalid characters, prefix with db_ if starts with digit
+# - Truncate to 63 chars (PostgreSQL limit)
+sanitize_db_name() {
+    local project_name="$1"
+
+    # Convert to lowercase, replace hyphens and dots with underscores
+    # Remove any character that's not alphanumeric or underscore
+    local sanitized
+    sanitized=$(echo "$project_name" | tr '[:upper:]' '[:lower:]' | tr '.-' '_' | tr -cd 'a-z0-9_')
+
+    # If starts with digit, prefix with 'db_'
+    if [[ "$sanitized" =~ ^[0-9] ]]; then
+        sanitized="db_${sanitized}"
+    fi
+
+    # Truncate to 63 chars (PostgreSQL limit)
+    echo "${sanitized:0:63}"
+}
+
+# Create PostgreSQL database inside container (idempotent)
+# Uses sudo -u postgres for PostgreSQL admin access
+create_project_database() {
+    local db_name="$1"
+
+    log_info "Creating database '$db_name'..."
+
+    container_exec "
+        if sudo -u postgres psql -tAc \"SELECT 1 FROM pg_database WHERE datname='$db_name'\" | grep -q 1; then
+            echo 'Database $db_name already exists'
+        else
+            sudo -u postgres createdb -O dev '$db_name'
+            sudo -u postgres psql -d '$db_name' -c 'CREATE EXTENSION IF NOT EXISTS pgcrypto;'
+            echo 'Database $db_name created'
+        fi
+    "
+}
+
+# Generate DATABASE_URL for PostgreSQL connection
+# Format: postgresql://user:password@host:port/database
+generate_database_url() {
+    local db_name="$1"
+    echo "postgresql://dev:dev@localhost:5432/${db_name}"
+}
+
+# Append DATABASE_URL to .env file inside container (idempotent)
+# Skips if DATABASE_URL already exists in .env
+append_database_url_to_env() {
+    local project_dir="$1"
+    local database_url="$2"
+    local env_file="$project_dir/.env"
+
+    container_exec "
+        # Create .env if it doesn't exist
+        touch '$env_file'
+
+        # Check if DATABASE_URL already exists (avoid duplicates)
+        if grep -qF 'DATABASE_URL=' '$env_file'; then
+            echo 'DATABASE_URL already exists in .env, skipping'
+        else
+            echo '' >> '$env_file'
+            echo 'DATABASE_URL=\"$database_url\"' >> '$env_file'
+            echo 'DATABASE_URL appended to .env'
+        fi
+    "
+}
+
+# -------------------------------------------
 # Transfer Functions
 # -------------------------------------------
 
