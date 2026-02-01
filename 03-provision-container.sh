@@ -412,6 +412,172 @@ install_claude_code() {
     fi
 }
 
-# Placeholder for remaining functions
-# configure_shell
-# print_status_summary
+# -------------------------------------------
+# Shell Configuration (PROV-11)
+# -------------------------------------------
+
+# Configure shell environment with database vars and useful aliases
+configure_shell() {
+    log_info "Configuring shell environment..."
+
+    # Add to .bashrc if not already present
+    container_exec '
+        BASHRC="$HOME/.bashrc"
+        MARKER="# Dev Sandbox Environment"
+
+        if grep -q "$MARKER" "$BASHRC"; then
+            echo "Shell already configured"
+        else
+            cat >> "$BASHRC" << '"'"'SHELL_CONFIG'"'"'
+
+# Dev Sandbox Environment
+# Added by 03-provision-container.sh
+
+# Database environment variables
+export PGHOST=localhost
+export PGPORT=5432
+export PGUSER=dev
+export PGPASSWORD=dev
+export PGDATABASE=dev
+export DATABASE_URL="postgresql://dev:dev@localhost:5432/dev"
+
+# Node.js via nvm (auto-load)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+# Claude Code
+export PATH="$HOME/.local/bin:$PATH"
+
+# Useful aliases
+alias ll="ls -la"
+alias pg="psql -U dev dev"
+alias pgstart="sudo systemctl start postgresql"
+alias pgstop="sudo systemctl stop postgresql"
+alias pgstatus="sudo systemctl status postgresql"
+alias tsstatus="tailscale status"
+alias tsip="tailscale ip -4"
+
+# Dev helper aliases
+alias npmi="npm install"
+alias npmr="npm run"
+alias pnpmi="pnpm install"
+alias yarni="yarn install"
+
+SHELL_CONFIG
+        fi
+    '
+
+    log_info "Shell environment configured"
+}
+
+# -------------------------------------------
+# Status Summary
+# -------------------------------------------
+
+# Print comprehensive status summary with versions and connection info
+print_status_summary() {
+    echo ""
+    echo "=========================================="
+    echo "Provisioning Complete!"
+    echo "=========================================="
+    echo ""
+
+    # Gather all version info
+    local ts_ip node_ver npm_ver yarn_ver pnpm_ver pg_ver claude_ver
+
+    ts_ip=$(container_exec 'tailscale ip -4' 2>/dev/null || echo "not connected")
+
+    node_ver=$(container_exec '
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        node --version
+    ' 2>/dev/null || echo "not installed")
+
+    npm_ver=$(container_exec '
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        npm --version
+    ' 2>/dev/null || echo "not installed")
+
+    yarn_ver=$(container_exec '
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        yarn --version
+    ' 2>/dev/null || echo "not installed")
+
+    pnpm_ver=$(container_exec '
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        pnpm --version
+    ' 2>/dev/null || echo "not installed")
+
+    pg_ver=$(container_exec 'psql --version' 2>/dev/null | head -1 || echo "not installed")
+
+    claude_ver=$(container_exec '$HOME/.local/bin/claude --version' 2>/dev/null || echo "not installed")
+
+    echo "Container: $CONTAINER_NAME"
+    echo ""
+    echo "Tailscale:"
+    echo "  IP: $ts_ip"
+    echo "  Status: $(container_exec 'tailscale status --self' 2>/dev/null | head -1 || echo 'unknown')"
+    echo ""
+    echo "Node.js:"
+    echo "  Node: $node_ver"
+    echo "  npm: $npm_ver"
+    echo "  yarn: $yarn_ver"
+    echo "  pnpm: $pnpm_ver"
+    echo ""
+    echo "PostgreSQL:"
+    echo "  Version: $pg_ver"
+    echo "  User: $PG_USER"
+    echo "  Database: $PG_DB"
+    echo "  Listen: 0.0.0.0:5432 (accessible via Tailscale)"
+    echo ""
+    echo "Playwright:"
+    echo "  Browsers: Chromium, Firefox"
+    echo ""
+    echo "Claude Code:"
+    echo "  Version: $claude_ver"
+    echo "  Path: ~/.local/bin/claude"
+    echo ""
+    echo "=========================================="
+    echo "Connection Instructions"
+    echo "=========================================="
+    echo ""
+    echo "SSH (from any Tailscale device):"
+    echo "  ssh root@$ts_ip"
+    echo "  ssh $CONTAINER_NAME  # if MagicDNS enabled"
+    echo ""
+    echo "PostgreSQL (from dev machine):"
+    echo "  psql -h $ts_ip -U dev dev"
+    echo "  # or with DATABASE_URL:"
+    echo "  postgresql://dev:dev@$ts_ip:5432/dev"
+    echo ""
+    echo "Inside container:"
+    echo "  lxc exec $CONTAINER_NAME -- bash"
+    echo ""
+}
+
+# ============================================
+# MAIN SCRIPT
+# ============================================
+
+echo "=========================================="
+echo "Dev Sandbox - Stack Provisioning"
+echo "=========================================="
+echo ""
+
+log_info "Provisioning container: $CONTAINER_NAME"
+echo ""
+
+# Install components in dependency order (per RESEARCH.md)
+install_tailscale      # First - provides connectivity verification
+install_postgresql     # Early - apt-based, stable
+install_node           # After apt, provides npm
+install_playwright     # Requires npm
+install_claude_code    # Last - independent
+configure_shell        # After all tools installed
+
+# Final verification and status summary
+print_status_summary
