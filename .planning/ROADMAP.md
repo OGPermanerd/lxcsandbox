@@ -16,6 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Container Creation** - Launch isolated LXC containers with networking
 - [x] **Phase 3: Stack Provisioning** - Install complete dev stack in containers
 - [x] **Phase 4: Management CLI** - User-facing commands for sandbox operations
+- [ ] **Phase 5: Tech Debt Cleanup** - Fix minor issues from milestone audit
 
 ## Phase Details
 
@@ -80,10 +81,25 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md - Update sandbox.sh with all CLI commands per CONTEXT.md decisions
 
+### Phase 5: Tech Debt Cleanup
+**Goal**: Clean up minor issues identified in milestone audit
+**Depends on**: Phase 4
+**Requirements**: None (polish, not requirements)
+**Gap Closure**: Addresses tech debt from v1.0-MILESTONE-AUDIT.md
+**Success Criteria** (what must be TRUE):
+  1. All scripts are executable (chmod +x applied)
+  2. 02-create-container.sh validates LXD is available before operations
+  3. 03-provision-container.sh validates TUN device before Tailscale install
+  4. No dead code (unused functions removed)
+**Plans**: TBD
+
+Plans:
+- [ ] (Plans to be created during planning phase)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -91,3 +107,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 2. Container Creation | 1/1 | Complete | 2026-02-01 |
 | 3. Stack Provisioning | 1/1 | Complete | 2026-02-01 |
 | 4. Management CLI | 1/1 | Complete | 2026-02-01 |
+| 5. Tech Debt Cleanup | 0/TBD | Not started | - |
