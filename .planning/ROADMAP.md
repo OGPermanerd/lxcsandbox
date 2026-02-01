@@ -91,10 +91,10 @@ Plans:
   2. 02-create-container.sh validates LXD is available before operations
   3. 03-provision-container.sh validates TUN device before Tailscale install
   4. No dead code (unused functions removed)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] (Plans to be created during planning phase)
+- [ ] 05-01-PLAN.md - Add defensive checks and remove dead code
 
 ## Progress
 
@@ -107,4 +107,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. Container Creation | 1/1 | Complete | 2026-02-01 |
 | 3. Stack Provisioning | 1/1 | Complete | 2026-02-01 |
 | 4. Management CLI | 1/1 | Complete | 2026-02-01 |
-| 5. Tech Debt Cleanup | 0/TBD | Not started | - |
+| 5. Tech Debt Cleanup | 0/1 | Planned | - |
