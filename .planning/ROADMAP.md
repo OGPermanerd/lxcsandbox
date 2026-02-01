@@ -60,10 +60,10 @@ Plans:
   4. Playwright is installed with Chromium and Firefox browsers ready
   5. Claude Code CLI is installed and accessible in PATH
   6. Shell has database environment variables and useful aliases configured
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] (Plans to be created during planning phase)
+- [ ] 03-01-PLAN.md - Create provisioning script with Tailscale, Node.js, PostgreSQL, Playwright, Claude Code
 
 ### Phase 4: Management CLI
 **Goal**: User has simple CLI commands for all sandbox operations
@@ -89,5 +89,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 |-------|----------------|--------|-----------|
 | 1. Host Infrastructure | 1/1 | Complete | 2026-02-01 |
 | 2. Container Creation | 1/1 | Complete | 2026-02-01 |
-| 3. Stack Provisioning | 0/TBD | Not started | - |
+| 3. Stack Provisioning | 0/1 | Planned | - |
 | 4. Management CLI | 0/TBD | Not started | - |
