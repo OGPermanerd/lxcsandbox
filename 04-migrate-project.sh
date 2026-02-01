@@ -4,13 +4,14 @@
 # Migrates project source code into LXC containers and installs dependencies
 # Run as root or with sudo
 #
-# Usage: ./04-migrate-project.sh <container-name> <source> [--branch <branch>]
+# Usage: ./04-migrate-project.sh <container-name> <source> [--branch <branch>] [--force]
 #
 # Examples:
 #   ./04-migrate-project.sh relay-dev https://github.com/user/project.git
 #   ./04-migrate-project.sh relay-dev https://github.com/user/project.git --branch main
 #   ./04-migrate-project.sh relay-dev git@github.com:user/project.git --branch v1.0.0
 #   ./04-migrate-project.sh relay-dev /path/to/local/project
+#   ./04-migrate-project.sh relay-dev https://github.com/user/project.git --force
 #
 # Features:
 # - Auto-detects source type (git URL vs local directory)
@@ -46,12 +47,15 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 # Argument Handling
 # -------------------------------------------
 if [[ $# -lt 2 ]]; then
-    echo "Usage: ./04-migrate-project.sh <container-name> <source> [--branch <branch>]"
+    echo "Usage: ./04-migrate-project.sh <container-name> <source> [--branch <branch>] [--force]"
     echo ""
     echo "Arguments:"
     echo "  container-name    Name of existing LXC container"
     echo "  source            Git URL (https:// or git@) or local directory path"
-    echo "  --branch <branch> Optional: branch or tag to clone (git sources only)"
+    echo ""
+    echo "Options:"
+    echo "  --branch <branch> Branch or tag to clone (git sources only)"
+    echo "  --force           Force re-migration (delete existing project first)"
     echo ""
     echo "Examples:"
     echo "  # Clone from GitHub (default branch)"
@@ -66,6 +70,9 @@ if [[ $# -lt 2 ]]; then
     echo "  # Copy local directory"
     echo "  ./04-migrate-project.sh relay-dev /path/to/local/project"
     echo ""
+    echo "  # Force re-migration (delete existing project)"
+    echo "  ./04-migrate-project.sh relay-dev https://github.com/user/project.git --force"
+    echo ""
     echo "Destination: /root/projects/<project-name> inside container"
     exit 1
 fi
@@ -74,8 +81,9 @@ CONTAINER_NAME="$1"
 SOURCE="$2"
 shift 2
 
-# Parse optional --branch flag
+# Parse optional flags
 BRANCH=""
+FORCE=""
 while [[ $# -gt 0 ]]; do
     case $1 in
         --branch)
@@ -86,6 +94,10 @@ while [[ $# -gt 0 ]]; do
                 log_error "--branch requires a value"
                 exit 1
             fi
+            ;;
+        --force)
+            FORCE="true"
+            shift 1
             ;;
         *)
             log_error "Unknown option: $1"
@@ -186,6 +198,37 @@ derive_project_name() {
 
     # From local path (resolve to absolute first)
     basename "$(cd "$source" && pwd)"
+}
+
+# Check if project already exists at destination
+check_existing_project() {
+    local dest_dir="$1"
+    if lxc exec "$CONTAINER_NAME" -- test -d "$dest_dir"; then
+        return 0  # Exists
+    fi
+    return 1  # Does not exist
+}
+
+# Print migration summary showing what was detected and done
+print_migration_summary() {
+    local project_name="$1"
+    local pkg_manager="$2"
+    local node_version="$3"
+    local db_name="$4"
+    local migration_tool="$5"
+
+    echo ""
+    echo "=========================================="
+    echo "         MIGRATION SUMMARY"
+    echo "=========================================="
+    echo ""
+    echo "Project:          $project_name"
+    echo "Package Manager:  ${pkg_manager:-none detected}"
+    echo "Node Version:     ${node_version:-not installed}"
+    echo "Database Created: ${db_name:-none}"
+    echo "Migration Tool:   ${migration_tool:-none}"
+    echo ""
+    echo "=========================================="
 }
 
 # -------------------------------------------
@@ -290,6 +333,7 @@ copy_env_example_if_needed() {
 # -------------------------------------------
 
 # Main Node.js setup orchestration
+# Sets global PKG_MANAGER for summary
 setup_nodejs_dependencies() {
     local project_dir="$1"
 
@@ -299,16 +343,15 @@ setup_nodejs_dependencies() {
     copy_env_example_if_needed "$project_dir"
 
     # Step 2: Detect package manager
-    local pm
-    pm=$(detect_package_manager "$project_dir")
-    log_info "Detected package manager: $pm"
+    PKG_MANAGER=$(detect_package_manager "$project_dir")
+    log_info "Detected package manager: $PKG_MANAGER"
 
     # Step 3: Handle .nvmrc if present
     setup_node_version "$project_dir"
 
     # Step 4: Install dependencies
     log_info "Installing dependencies..."
-    if ! install_dependencies "$project_dir" "$pm"; then
+    if ! install_dependencies "$project_dir" "$PKG_MANAGER"; then
         log_error "Dependency installation failed"
         return 1
     fi
@@ -492,6 +535,7 @@ run_sql_migrations() {
 
 # Main database setup orchestration
 # Creates database, generates DATABASE_URL, runs migrations
+# Sets global DB_NAME and MIGRATION_TOOL for summary
 setup_database() {
     local project_dir="$1"
     local project_name
@@ -500,26 +544,24 @@ setup_database() {
     log_info "=== Database Setup ==="
 
     # Step 1: Sanitize project name for PostgreSQL
-    local db_name
-    db_name=$(sanitize_db_name "$project_name")
-    log_info "Database name: $db_name"
+    DB_NAME=$(sanitize_db_name "$project_name")
+    log_info "Database name: $DB_NAME"
 
     # Step 2: Create database if not exists
-    create_project_database "$db_name"
+    create_project_database "$DB_NAME"
 
     # Step 3: Generate DATABASE_URL
     local database_url
-    database_url=$(generate_database_url "$db_name")
+    database_url=$(generate_database_url "$DB_NAME")
 
     # Step 4: Append DATABASE_URL to .env
     append_database_url_to_env "$project_dir" "$database_url"
 
     # Step 5: Detect and run migrations
-    local migration_tool
-    migration_tool=$(detect_migration_tool "$project_dir")
-    log_info "Detected migration tool: $migration_tool"
+    MIGRATION_TOOL=$(detect_migration_tool "$project_dir")
+    log_info "Detected migration tool: $MIGRATION_TOOL"
 
-    case "$migration_tool" in
+    case "$MIGRATION_TOOL" in
         prisma)
             run_prisma_migrations "$project_dir" "$database_url"
             ;;
@@ -527,7 +569,7 @@ setup_database() {
             run_drizzle_migrations "$project_dir" "$database_url"
             ;;
         sql)
-            run_sql_migrations "$project_dir" "$db_name"
+            run_sql_migrations "$project_dir" "$DB_NAME"
             ;;
         none)
             log_info "No migration tool detected, skipping migrations"
@@ -636,6 +678,22 @@ transfer_project() {
     [[ -n "${BRANCH:-}" ]] && log_info "Branch: $BRANCH"
     echo ""
 
+    # Check for existing project
+    if check_existing_project "$dest_dir"; then
+        if [[ "$FORCE" == "true" ]]; then
+            log_warn "Project exists at $dest_dir - removing for re-migration (--force)"
+            container_exec "rm -rf '$dest_dir'"
+        else
+            log_error "Project already exists at $dest_dir"
+            echo ""
+            echo "Options:"
+            echo "  1. Use --force to overwrite: ./04-migrate-project.sh $CONTAINER_NAME $SOURCE --force"
+            echo "  2. Delete manually: lxc exec $CONTAINER_NAME -- rm -rf $dest_dir"
+            echo ""
+            exit 1
+        fi
+    fi
+
     # Create projects directory
     container_exec "mkdir -p /root/projects"
 
@@ -670,11 +728,17 @@ transfer_project() {
     lxc exec "$CONTAINER_NAME" -- ls -la "$dest_dir" | head -15
     echo ""
 
-    # Install Node.js dependencies
+    # Install Node.js dependencies (sets PKG_MANAGER)
     setup_nodejs_dependencies "$dest_dir"
 
-    # Create database and run migrations
+    # Create database and run migrations (sets DB_NAME, MIGRATION_TOOL)
     setup_database "$dest_dir"
+
+    # Get node version for summary
+    NODE_VERSION=$(container_exec "node --version 2>/dev/null" || echo "not installed")
+
+    # Print migration summary
+    print_migration_summary "$project_name" "$PKG_MANAGER" "$NODE_VERSION" "$DB_NAME" "$MIGRATION_TOOL"
 
     echo ""
     log_info "=== Migration Complete ==="
