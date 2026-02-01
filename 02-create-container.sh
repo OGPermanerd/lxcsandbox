@@ -64,6 +64,19 @@ if ! command -v lxc &>/dev/null; then
     exit 1
 fi
 
+# Check if LXD is properly initialized (has storage pool and profile with root disk)
+if ! lxc profile device list default 2>/dev/null | grep -q "^root:"; then
+    log_error "LXD is not properly initialized (default profile missing root disk)"
+    echo ""
+    echo "Run the host setup script to fix this:"
+    echo "  sudo ./01-setup-host.sh"
+    echo ""
+    echo "Or manually add a root disk to the default profile:"
+    echo "  lxc storage create default dir"
+    echo "  lxc profile device add default root disk path=/ pool=default"
+    exit 1
+fi
+
 # -------------------------------------------
 # Container Name Validation (before root check - better UX)
 # -------------------------------------------

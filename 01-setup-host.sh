@@ -146,14 +146,48 @@ if lxc network list --format csv 2>/dev/null | grep -q "^lxdbr0,"; then
     log_info "Network 'lxdbr0' already exists ✓"
 fi
 
-# If both exist, skip preseed
-if [[ "$STORAGE_EXISTS" == true && "$NETWORK_EXISTS" == true ]]; then
+# Check if default profile has root disk device
+PROFILE_HAS_ROOT=false
+if lxc profile device list default 2>/dev/null | grep -q "^root:"; then
+    PROFILE_HAS_ROOT=true
+    log_info "Default profile has root disk ✓"
+fi
+
+# If all exist, skip preseed
+if [[ "$STORAGE_EXISTS" == true && "$NETWORK_EXISTS" == true && "$PROFILE_HAS_ROOT" == true ]]; then
     log_info "LXD already initialized, skipping preseed ✓"
+elif [[ "$STORAGE_EXISTS" == true && "$NETWORK_EXISTS" == true && "$PROFILE_HAS_ROOT" == false ]]; then
+    # Storage and network exist but profile missing root disk - fix profile only
+    log_warn "Default profile missing root disk device - adding it now..."
+
+    # Get the storage pool name (use 'default' if it exists, otherwise first available)
+    POOL_NAME="default"
+    if ! lxc storage list --format csv 2>/dev/null | grep -q "^default,"; then
+        POOL_NAME=$(lxc storage list --format csv 2>/dev/null | head -1 | cut -d',' -f1)
+    fi
+
+    if [[ -n "$POOL_NAME" ]]; then
+        lxc profile device add default root disk path=/ pool="$POOL_NAME" 2>/dev/null || \
+            log_warn "Root device may already exist with different config"
+        log_info "Added root disk device to default profile (pool: $POOL_NAME) ✓"
+    else
+        log_error "No storage pool found - cannot add root disk"
+        exit 1
+    fi
+
+    # Also ensure eth0 network device exists
+    if ! lxc profile device list default 2>/dev/null | grep -q "^eth0:"; then
+        lxc profile device add default eth0 nic network=lxdbr0 name=eth0 2>/dev/null || true
+        log_info "Added eth0 network device to default profile ✓"
+    fi
 else
     log_info "Initializing LXD with preseed configuration..."
 
-    # Apply preseed configuration
-    cat <<'EOF' | lxd init --preseed
+    # Try btrfs first, fall back to dir if it fails
+    PRESEED_SUCCESS=false
+
+    # Apply preseed configuration with btrfs
+    if cat <<'EOF' | lxd init --preseed 2>/dev/null; then
 config: {}
 networks:
 - name: lxdbr0
@@ -180,8 +214,44 @@ profiles:
       pool: default
       type: disk
 EOF
+        PRESEED_SUCCESS=true
+        log_info "LXD initialized with btrfs storage ✓"
+    else
+        log_warn "btrfs storage failed, trying dir backend..."
 
-    log_info "LXD initialized successfully ✓"
+        # Fallback to dir driver (works everywhere but slower)
+        if cat <<'EOF' | lxd init --preseed; then
+config: {}
+networks:
+- name: lxdbr0
+  type: bridge
+  config:
+    ipv4.address: 10.10.10.1/24
+    ipv4.nat: "true"
+    ipv6.address: none
+storage_pools:
+- name: default
+  driver: dir
+profiles:
+- name: default
+  config: {}
+  devices:
+    eth0:
+      name: eth0
+      network: lxdbr0
+      type: nic
+    root:
+      path: /
+      pool: default
+      type: disk
+EOF
+            PRESEED_SUCCESS=true
+            log_info "LXD initialized with dir storage ✓"
+        else
+            log_error "LXD initialization failed with both btrfs and dir backends"
+            exit 1
+        fi
+    fi
 fi
 
 # -------------------------------------------
