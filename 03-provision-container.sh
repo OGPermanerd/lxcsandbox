@@ -382,6 +382,9 @@ install_node() {
 
         nvm alias default '"$NODE_VERSION"'
         nvm use default
+
+        # Update npm to latest
+        npm install -g npm@latest
     '
 
     # Verify installation
@@ -547,6 +550,10 @@ setup_dev_user_environment() {
         nvm install '"$NODE_VERSION"'
         nvm alias default '"$NODE_VERSION"'
         nvm use default
+
+        # Update npm to latest
+        npm install -g npm@latest
+
         corepack enable
     '
 

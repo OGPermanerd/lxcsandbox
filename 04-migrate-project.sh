@@ -503,7 +503,7 @@ run_prisma_migrations() {
         export NVM_DIR=\"\$HOME/.nvm\"
         [ -s \"\$NVM_DIR/nvm.sh\" ] && \\. \"\$NVM_DIR/nvm.sh\"
         cd '$project_dir'
-        DATABASE_URL='$database_url' npx prisma migrate deploy
+        DATABASE_URL='$database_url' npx -y prisma migrate deploy
     "
 
     log_info "Prisma migrations complete"
@@ -522,7 +522,7 @@ run_drizzle_migrations() {
         export NVM_DIR=\"\$HOME/.nvm\"
         [ -s \"\$NVM_DIR/nvm.sh\" ] && \\. \"\$NVM_DIR/nvm.sh\"
         cd '$project_dir'
-        DATABASE_URL='$database_url' npx drizzle-kit push --force
+        DATABASE_URL='$database_url' npx -y drizzle-kit push --force
     "
 
     log_info "Drizzle schema push complete"
