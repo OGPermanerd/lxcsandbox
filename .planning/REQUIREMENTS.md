@@ -9,37 +9,37 @@ Requirements for fixing authentication issues discovered during real-world usage
 
 ### Claude Code Auth (CLAUDE)
 
-- [ ] **CLAUDE-01**: Container has ~/.claude directory copied from host (if exists)
-- [ ] **CLAUDE-02**: Claude Code works without manual `/login` in new containers
-- [ ] **CLAUDE-03**: Auth copying is automatic during container creation
+- [x] **CLAUDE-01**: Container has ~/.claude directory copied from host (if exists)
+- [x] **CLAUDE-02**: Claude Code works without manual `/login` in new containers
+- [x] **CLAUDE-03**: Auth copying is automatic during container creation
 
 ### Git Auth (GIT)
 
-- [ ] **GIT-01**: Container has ~/.ssh directory copied from host (if exists)
-- [ ] **GIT-02**: Container has ~/.config/gh directory copied from host (if exists)
-- [ ] **GIT-03**: SSH known_hosts includes github.com and gitlab.com
-- [ ] **GIT-04**: Git push/pull works without manual credential setup
-- [ ] **GIT-05**: `--with-gh-creds` flag removed (credential copying is default)
+- [x] **GIT-01**: Container has ~/.ssh directory copied from host (if exists)
+- [x] **GIT-02**: Container has ~/.config/gh directory copied from host (if exists)
+- [x] **GIT-03**: SSH known_hosts includes github.com and gitlab.com
+- [x] **GIT-04**: Git push/pull works without manual credential setup
+- [x] **GIT-05**: `--with-gh-creds` flag removed (credential copying is default)
 
 ### Dev User (DEV)
 
-- [ ] **DEV-01**: Credentials copied to both root and dev users
-- [ ] **DEV-02**: Correct ownership set on copied credential files
+- [x] **DEV-01**: Credentials copied to both root and dev users
+- [x] **DEV-02**: Correct ownership set on copied credential files
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLAUDE-01 | Phase 10 | Pending |
-| CLAUDE-02 | Phase 10 | Pending |
-| CLAUDE-03 | Phase 10 | Pending |
-| GIT-01 | Phase 10 | Pending |
-| GIT-02 | Phase 10 | Pending |
-| GIT-03 | Phase 10 | Pending |
-| GIT-04 | Phase 10 | Pending |
-| GIT-05 | Phase 10 | Pending |
-| DEV-01 | Phase 10 | Pending |
-| DEV-02 | Phase 10 | Pending |
+| CLAUDE-01 | Phase 10 | Complete |
+| CLAUDE-02 | Phase 10 | Complete |
+| CLAUDE-03 | Phase 10 | Complete |
+| GIT-01 | Phase 10 | Complete |
+| GIT-02 | Phase 10 | Complete |
+| GIT-03 | Phase 10 | Complete |
+| GIT-04 | Phase 10 | Complete |
+| GIT-05 | Phase 10 | Complete |
+| DEV-01 | Phase 10 | Complete |
+| DEV-02 | Phase 10 | Complete |
 
 ## Out of Scope
 
@@ -56,3 +56,4 @@ Requirements for fixing authentication issues discovered during real-world usage
 
 ---
 *Created: 2026-02-02 for v1.2 milestone*
+*Updated: 2026-02-02 — all requirements complete*

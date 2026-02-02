@@ -41,7 +41,7 @@ See: .planning/milestones/v1.0-ROADMAP.md
 
 **Milestone Goal:** Fix authentication issues so Claude Code and git work out-of-the-box in new containers.
 
-- [ ] **Phase 10: Credential Setup** - Copy Claude Code and git credentials from host to container automatically
+- [x] **Phase 10: Credential Setup** - Copy Claude Code and git credentials from host to container automatically
 
 ## Phase Details
 
@@ -143,7 +143,7 @@ Plans:
 | 7. Node.js Setup | v1.1 | 1/1 | Complete | 2026-02-01 |
 | 8. Database Integration | v1.1 | 1/1 | Complete | 2026-02-01 |
 | 9. CLI Integration | v1.1 | 1/1 | Complete | 2026-02-01 |
-| 10. Credential Setup | v1.2 | 1/1 | Planned | — |
+| 10. Credential Setup | v1.2 | 1/1 | Complete | 2026-02-02 |
 
 ## Requirement Coverage
 
