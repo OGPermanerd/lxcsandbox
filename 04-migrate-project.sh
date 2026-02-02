@@ -216,6 +216,7 @@ print_migration_summary() {
     local node_version="$3"
     local db_name="$4"
     local migration_tool="$5"
+    local monorepo_type="$6"
 
     echo ""
     echo "=========================================="
@@ -224,6 +225,7 @@ print_migration_summary() {
     echo ""
     echo "Project:          $project_name"
     echo "Package Manager:  ${pkg_manager:-none detected}"
+    echo "Monorepo Type:    ${monorepo_type:-none}"
     echo "Node Version:     ${node_version:-not installed}"
     echo "Database Created: ${db_name:-none}"
     echo "Migration Tool:   ${migration_tool:-none}"
@@ -310,6 +312,100 @@ install_dependencies() {
     log_info "Dependencies installed successfully"
 }
 
+# Detect if project is a monorepo
+# Returns: "turbo", "pnpm", "lerna", "nx", or "none"
+detect_monorepo_type() {
+    local project_dir="$1"
+
+    # Turbo (most common for modern JS monorepos)
+    if lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/turbo.json"; then
+        echo "turbo"
+        return 0
+    fi
+
+    # pnpm workspaces
+    if lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/pnpm-workspace.yaml"; then
+        echo "pnpm"
+        return 0
+    fi
+
+    # Lerna
+    if lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/lerna.json"; then
+        echo "lerna"
+        return 0
+    fi
+
+    # Nx
+    if lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/nx.json"; then
+        echo "nx"
+        return 0
+    fi
+
+    # Check for yarn/npm workspaces in package.json
+    if lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/package.json"; then
+        if lxc exec "$CONTAINER_NAME" -- grep -q '"workspaces"' "$project_dir/package.json" 2>/dev/null; then
+            echo "workspaces"
+            return 0
+        fi
+    fi
+
+    echo "none"
+}
+
+# Build monorepo internal packages
+# This ensures shared packages are compiled before apps try to import them
+build_monorepo() {
+    local project_dir="$1"
+    local package_manager="$2"
+    local monorepo_type="$3"
+
+    log_info "Building monorepo packages ($monorepo_type)..."
+
+    container_exec "
+        export NVM_DIR=\"\$HOME/.nvm\"
+        [ -s \"\$NVM_DIR/nvm.sh\" ] && \\. \"\$NVM_DIR/nvm.sh\"
+        cd '$project_dir'
+
+        # Try build command based on monorepo type and package manager
+        case '$monorepo_type' in
+            turbo)
+                # Turbo: run build task
+                if grep -q '\"build\"' package.json 2>/dev/null; then
+                    echo 'Running turbo build...'
+                    case '$package_manager' in
+                        pnpm) pnpm build ;;
+                        yarn) yarn build ;;
+                        npm) npm run build ;;
+                    esac
+                fi
+                ;;
+            pnpm|workspaces)
+                # pnpm/yarn/npm workspaces: run build if it exists
+                if grep -q '\"build\"' package.json 2>/dev/null; then
+                    echo 'Running workspace build...'
+                    case '$package_manager' in
+                        pnpm) pnpm build ;;
+                        yarn) yarn build ;;
+                        npm) npm run build ;;
+                    esac
+                fi
+                ;;
+            lerna)
+                # Lerna: use lerna run build
+                echo 'Running lerna build...'
+                npx -y lerna run build
+                ;;
+            nx)
+                # Nx: use nx run-many
+                echo 'Running nx build...'
+                npx -y nx run-many --target=build --all
+                ;;
+        esac
+    "
+
+    log_info "Monorepo build complete"
+}
+
 # Copy .env.example to .env if no env file exists
 # Skips if .env or .env.local already present (frameworks like Next.js use .env.local)
 copy_env_example_if_needed() {
@@ -376,6 +472,13 @@ setup_nodejs_dependencies() {
     if ! install_dependencies "$project_dir" "$PKG_MANAGER"; then
         log_error "Dependency installation failed"
         return 1
+    fi
+
+    # Step 5: Detect and build monorepo if needed
+    MONOREPO_TYPE=$(detect_monorepo_type "$project_dir")
+    if [[ "$MONOREPO_TYPE" != "none" ]]; then
+        log_info "Detected monorepo type: $MONOREPO_TYPE"
+        build_monorepo "$project_dir" "$PKG_MANAGER" "$MONOREPO_TYPE"
     fi
 
     log_info "Node.js setup complete"
@@ -774,6 +877,7 @@ transfer_project() {
     else
         log_info "No package.json found - skipping Node.js setup"
         PKG_MANAGER=""
+        MONOREPO_TYPE="none"
     fi
 
     # Create database and run migrations only if migration tool detected (sets DB_NAME, MIGRATION_TOOL)
@@ -789,7 +893,7 @@ transfer_project() {
     NODE_VERSION=$(container_exec 'export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"; node --version 2>/dev/null' || echo "not installed")
 
     # Print migration summary
-    print_migration_summary "$project_name" "$PKG_MANAGER" "$NODE_VERSION" "$DB_NAME" "$MIGRATION_TOOL"
+    print_migration_summary "$project_name" "$PKG_MANAGER" "$NODE_VERSION" "$DB_NAME" "$MIGRATION_TOOL" "$MONOREPO_TYPE"
 
     echo ""
     log_info "=== Migration Complete ==="
