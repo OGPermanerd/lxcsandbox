@@ -592,12 +592,19 @@ setup_ssh_keys() {
     container_exec 'chmod 600 ~/.ssh/authorized_keys'
 
     # Copy SSH keys to dev user as well
+    log_info "Copying SSH keys to dev user..."
     container_exec '
         mkdir -p /home/dev/.ssh
-        cp /root/.ssh/authorized_keys /home/dev/.ssh/authorized_keys 2>/dev/null || true
-        chown -R dev:dev /home/dev/.ssh
         chmod 700 /home/dev/.ssh
-        chmod 600 /home/dev/.ssh/authorized_keys 2>/dev/null || true
+        chown dev:dev /home/dev/.ssh
+        if [ -f /root/.ssh/authorized_keys ] && [ -s /root/.ssh/authorized_keys ]; then
+            cp /root/.ssh/authorized_keys /home/dev/.ssh/authorized_keys
+            chown dev:dev /home/dev/.ssh/authorized_keys
+            chmod 600 /home/dev/.ssh/authorized_keys
+            echo "SSH keys copied to dev user"
+        else
+            echo "Warning: No authorized_keys to copy"
+        fi
     '
 
     if [[ $keys_added -gt 0 ]]; then
