@@ -451,14 +451,13 @@ install_claude_code() {
     fi
 }
 
-# Copy Claude Code credentials from host to container
+# Copy Claude Code credentials and config from host to container
 copy_claude_credentials() {
-    log_info "Copying Claude Code credentials..."
+    log_info "Copying Claude Code credentials and config..."
 
     # Find credentials from the user who ran sudo (or root)
     local source_user="${SUDO_USER:-root}"
     local source_home
-    local creds_file
 
     if [[ "$source_user" == "root" ]]; then
         source_home="/root"
@@ -466,25 +465,40 @@ copy_claude_credentials() {
         source_home=$(getent passwd "$source_user" | cut -d: -f6)
     fi
 
-    creds_file="$source_home/.claude/.credentials.json"
+    local creds_file="$source_home/.claude/.credentials.json"
+    local config_file="$source_home/.claude.json"
+    local copied=false
 
-    if [[ ! -f "$creds_file" ]]; then
-        log_warn "No Claude credentials found at $creds_file"
-        log_warn "You'll need to authenticate Claude Code manually in the container"
-        return 0
+    # Create .claude directories
+    container_exec 'mkdir -p ~/.claude && chmod 700 ~/.claude'
+    container_exec 'mkdir -p /home/dev/.claude && chmod 700 /home/dev/.claude && chown dev:dev /home/dev/.claude'
+
+    # Copy credentials file if exists
+    if [[ -f "$creds_file" ]]; then
+        log_info "Copying credentials..."
+        lxc file push "$creds_file" "$CONTAINER_NAME/root/.claude/.credentials.json"
+        container_exec 'chmod 600 ~/.claude/.credentials.json'
+        lxc file push "$creds_file" "$CONTAINER_NAME/home/dev/.claude/.credentials.json"
+        container_exec 'chown dev:dev /home/dev/.claude/.credentials.json && chmod 600 /home/dev/.claude/.credentials.json'
+        copied=true
     fi
 
-    # Copy to root user in container
-    container_exec 'mkdir -p ~/.claude && chmod 700 ~/.claude'
-    lxc file push "$creds_file" "$CONTAINER_NAME/root/.claude/.credentials.json"
-    container_exec 'chmod 600 ~/.claude/.credentials.json'
+    # Copy main config file if exists (contains onboarding state, theme, account info)
+    if [[ -f "$config_file" ]]; then
+        log_info "Copying config..."
+        lxc file push "$config_file" "$CONTAINER_NAME/root/.claude.json"
+        container_exec 'chmod 600 ~/.claude.json'
+        lxc file push "$config_file" "$CONTAINER_NAME/home/dev/.claude.json"
+        container_exec 'chown dev:dev /home/dev/.claude.json && chmod 600 /home/dev/.claude.json'
+        copied=true
+    fi
 
-    # Copy to dev user in container
-    container_exec 'mkdir -p /home/dev/.claude && chmod 700 /home/dev/.claude && chown dev:dev /home/dev/.claude'
-    lxc file push "$creds_file" "$CONTAINER_NAME/home/dev/.claude/.credentials.json"
-    container_exec 'chown dev:dev /home/dev/.claude/.credentials.json && chmod 600 /home/dev/.claude/.credentials.json'
-
-    log_info "Claude credentials copied to root and dev users"
+    if [[ "$copied" == "true" ]]; then
+        log_info "Claude credentials and config copied to root and dev users"
+    else
+        log_warn "No Claude credentials found at $creds_file or $config_file"
+        log_warn "You'll need to authenticate Claude Code manually in the container"
+    fi
 }
 
 # -------------------------------------------
