@@ -75,14 +75,15 @@ dev-sandbox-infra/
 ### Create New Sandbox
 ```bash
 # Create and provision in one command
+# (Git credentials and Claude Code auth are automatically copied from the host user)
 sudo ./sandbox.sh create relay-dev tskey-auth-xxxxxxx
-
-# With git credentials (SSH keys, .gitconfig, gh CLI) for push/pull
-sudo ./sandbox.sh create relay-dev tskey-auth-xxxxxxx --with-gh-creds
 
 # Or without Tailscale (local development only)
 sudo ./sandbox.sh create relay-dev --no-tailscale
 ```
+
+> **Note:** SSH keys, `.gitconfig`, gh CLI auth, and Claude Code credentials are automatically
+> copied from the user running sudo. Git push/pull and `claude` should work immediately.
 
 ### Migrate Project into Sandbox
 ```bash

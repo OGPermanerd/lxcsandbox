@@ -14,7 +14,8 @@
 # - Playwright with Chromium and Firefox
 # - Claude Code CLI
 # - Shell environment with database vars and aliases
-# - Optional: Git/GitHub credentials for pushing/pulling (--with-gh-creds)
+# - Git/GitHub credentials (SSH keys, .gitconfig, gh CLI) from host
+# - Claude Code credentials from host
 #
 
 set -euo pipefail
@@ -40,7 +41,6 @@ if [[ $# -lt 2 ]]; then
     echo "       ./03-provision-container.sh <container-name> --no-tailscale [options]"
     echo ""
     echo "Example: ./03-provision-container.sh relay-dev tskey-auth-xxxxxxxx"
-    echo "         ./03-provision-container.sh relay-dev tskey-auth-xxxxxxxx --with-gh-creds"
     echo ""
     echo "Arguments:"
     echo "  container-name    Name of existing LXC container (created by 02-create-container.sh)"
@@ -49,14 +49,15 @@ if [[ $# -lt 2 ]]; then
     echo ""
     echo "Options:"
     echo "  --no-tailscale    Skip Tailscale setup (local development only)"
-    echo "  --with-gh-creds   Copy git credentials (SSH keys, .gitconfig, gh CLI) from host"
+    echo ""
+    echo "Note: Git credentials (SSH keys, .gitconfig, gh CLI) and Claude Code credentials"
+    echo "      are automatically copied from the host user who runs sudo."
     exit 1
 fi
 
 CONTAINER_NAME="$1"
 TAILSCALE_AUTHKEY="$2"
 SKIP_TAILSCALE=false
-WITH_GH_CREDS=false
 
 if [[ "$TAILSCALE_AUTHKEY" == "--no-tailscale" ]]; then
     SKIP_TAILSCALE=true
@@ -66,10 +67,6 @@ fi
 shift 2
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --with-gh-creds)
-            WITH_GH_CREDS=true
-            shift
-            ;;
         --no-tailscale)
             # Allow --no-tailscale as trailing option too
             SKIP_TAILSCALE=true
@@ -669,13 +666,14 @@ setup_ssh_keys() {
 }
 
 # -------------------------------------------
-# Git Credentials Setup (for --with-gh-creds)
+# Git Credentials Setup
 # -------------------------------------------
 
-# Copy git credentials from host to container's dev user
+# Copy git credentials from host to container
 # Includes: SSH private keys, .gitconfig, GitHub CLI config
+# Copies to both root and dev users for consistency
 setup_git_credentials() {
-    log_info "Setting up git credentials for dev user..."
+    log_info "Setting up git credentials for root and dev users..."
 
     # Find credentials from the user who ran sudo (or root)
     local source_user="${SUDO_USER:-root}"
@@ -691,20 +689,27 @@ setup_git_credentials() {
     # --- SSH Private Keys ---
     log_info "Copying SSH private keys..."
     container_exec 'mkdir -p /home/dev/.ssh && chmod 700 /home/dev/.ssh && chown dev:dev /home/dev/.ssh'
+    container_exec 'mkdir -p /root/.ssh && chmod 700 /root/.ssh'
 
     for keyfile in "$source_home"/.ssh/id_*; do
         if [[ -f "$keyfile" ]] && [[ ! "$keyfile" =~ \.pub$ ]]; then
             local keyname
             keyname=$(basename "$keyfile")
             log_info "  Copying $keyname"
+            # Copy to dev user
             lxc file push "$keyfile" "$CONTAINER_NAME/home/dev/.ssh/$keyname"
             container_exec "chown dev:dev /home/dev/.ssh/$keyname && chmod 600 /home/dev/.ssh/$keyname"
+            # Copy to root user
+            lxc file push "$keyfile" "$CONTAINER_NAME/root/.ssh/$keyname"
+            container_exec "chmod 600 /root/.ssh/$keyname"
             ((copied_items++))
 
             # Also copy the corresponding .pub file if it exists
             if [[ -f "${keyfile}.pub" ]]; then
                 lxc file push "${keyfile}.pub" "$CONTAINER_NAME/home/dev/.ssh/${keyname}.pub"
                 container_exec "chown dev:dev /home/dev/.ssh/${keyname}.pub && chmod 644 /home/dev/.ssh/${keyname}.pub"
+                lxc file push "${keyfile}.pub" "$CONTAINER_NAME/root/.ssh/${keyname}.pub"
+                container_exec "chmod 644 /root/.ssh/${keyname}.pub"
             fi
         fi
     done
@@ -714,13 +719,42 @@ setup_git_credentials() {
         log_info "  Copying known_hosts"
         lxc file push "$source_home/.ssh/known_hosts" "$CONTAINER_NAME/home/dev/.ssh/known_hosts"
         container_exec 'chown dev:dev /home/dev/.ssh/known_hosts && chmod 644 /home/dev/.ssh/known_hosts'
+        lxc file push "$source_home/.ssh/known_hosts" "$CONTAINER_NAME/root/.ssh/known_hosts"
+        container_exec 'chmod 644 /root/.ssh/known_hosts'
     fi
+
+    # Ensure GitHub and GitLab are in known_hosts (even if host didn't have them)
+    log_info "  Adding GitHub and GitLab to known_hosts..."
+    container_exec '
+        # For dev user
+        touch /home/dev/.ssh/known_hosts
+        if ! grep -q "github.com" /home/dev/.ssh/known_hosts 2>/dev/null; then
+            ssh-keyscan -t ed25519,rsa github.com >> /home/dev/.ssh/known_hosts 2>/dev/null || true
+        fi
+        if ! grep -q "gitlab.com" /home/dev/.ssh/known_hosts 2>/dev/null; then
+            ssh-keyscan -t ed25519,rsa gitlab.com >> /home/dev/.ssh/known_hosts 2>/dev/null || true
+        fi
+        chown dev:dev /home/dev/.ssh/known_hosts
+        chmod 644 /home/dev/.ssh/known_hosts
+
+        # For root user
+        touch /root/.ssh/known_hosts
+        if ! grep -q "github.com" /root/.ssh/known_hosts 2>/dev/null; then
+            ssh-keyscan -t ed25519,rsa github.com >> /root/.ssh/known_hosts 2>/dev/null || true
+        fi
+        if ! grep -q "gitlab.com" /root/.ssh/known_hosts 2>/dev/null; then
+            ssh-keyscan -t ed25519,rsa gitlab.com >> /root/.ssh/known_hosts 2>/dev/null || true
+        fi
+        chmod 644 /root/.ssh/known_hosts
+    '
 
     # Copy SSH config if exists
     if [[ -f "$source_home/.ssh/config" ]]; then
         log_info "  Copying SSH config"
         lxc file push "$source_home/.ssh/config" "$CONTAINER_NAME/home/dev/.ssh/config"
         container_exec 'chown dev:dev /home/dev/.ssh/config && chmod 600 /home/dev/.ssh/config'
+        lxc file push "$source_home/.ssh/config" "$CONTAINER_NAME/root/.ssh/config"
+        container_exec 'chmod 600 /root/.ssh/config'
     fi
 
     # --- Git Config ---
@@ -728,6 +762,8 @@ setup_git_credentials() {
         log_info "Copying .gitconfig..."
         lxc file push "$source_home/.gitconfig" "$CONTAINER_NAME/home/dev/.gitconfig"
         container_exec 'chown dev:dev /home/dev/.gitconfig && chmod 644 /home/dev/.gitconfig'
+        lxc file push "$source_home/.gitconfig" "$CONTAINER_NAME/root/.gitconfig"
+        container_exec 'chmod 644 /root/.gitconfig'
         ((copied_items++))
     else
         log_warn "No .gitconfig found at $source_home/.gitconfig"
@@ -736,11 +772,14 @@ setup_git_credentials() {
     # --- GitHub CLI Config ---
     if [[ -d "$source_home/.config/gh" ]]; then
         log_info "Copying GitHub CLI config..."
+        # For dev user
         container_exec 'mkdir -p /home/dev/.config && chown dev:dev /home/dev/.config'
-
-        # Use tar to preserve directory structure
         tar -C "$source_home/.config" -cf - gh | lxc exec "$CONTAINER_NAME" -- tar -C /home/dev/.config -xf -
         container_exec 'chown -R dev:dev /home/dev/.config/gh && chmod 700 /home/dev/.config/gh'
+        # For root user
+        container_exec 'mkdir -p /root/.config'
+        tar -C "$source_home/.config" -cf - gh | lxc exec "$CONTAINER_NAME" -- tar -C /root/.config -xf -
+        container_exec 'chmod 700 /root/.config/gh'
         ((copied_items++))
         log_info "GitHub CLI config copied (gh auth status will work)"
     else
@@ -748,7 +787,7 @@ setup_git_credentials() {
     fi
 
     if [[ $copied_items -gt 0 ]]; then
-        log_info "Git credentials configured for dev user ✓ ($copied_items items)"
+        log_info "Git credentials configured for root and dev users ✓ ($copied_items items)"
         echo ""
         echo "  Git operations (push/pull) should now work in the container."
         echo "  Test with: ssh dev@<container-ip> 'git ls-remote git@github.com:user/repo.git'"
@@ -1069,14 +1108,14 @@ print_status_summary() {
     echo "Claude Code:"
     echo "  Version: $claude_ver"
     echo "  Path: ~/.local/bin/claude"
+    echo "  Credentials: copied from host (if available)"
     echo ""
-    if [[ "$WITH_GH_CREDS" == true ]]; then
-        echo "Git Credentials:"
-        echo "  SSH keys: copied to /home/dev/.ssh/"
-        echo "  .gitconfig: copied to /home/dev/"
-        echo "  GitHub CLI: copied to /home/dev/.config/gh/"
-        echo ""
-    fi
+    echo "Git Credentials (copied from host):"
+    echo "  SSH keys: ~/.ssh/ (root and dev)"
+    echo "  .gitconfig: ~/ (root and dev)"
+    echo "  GitHub CLI: ~/.config/gh/ (root and dev)"
+    echo "  known_hosts: github.com, gitlab.com pre-added"
+    echo ""
     echo "=========================================="
     echo "Connection Instructions"
     echo "=========================================="
@@ -1132,9 +1171,7 @@ install_claude_code    # Claude Code for root
 setup_dev_user_environment  # Node.js and Claude Code for dev user
 copy_claude_credentials    # Copy host's Claude auth to container
 setup_ssh_keys         # Copy host's authorized keys to root and dev
-if [[ "$WITH_GH_CREDS" == true ]]; then
-    setup_git_credentials  # Copy SSH keys, .gitconfig, gh CLI for git push/pull
-fi
+setup_git_credentials  # Copy SSH keys, .gitconfig, gh CLI for git push/pull
 configure_shell        # After all tools installed
 create_claude_md       # Claude Code environment awareness
 
