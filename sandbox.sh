@@ -36,7 +36,7 @@ show_help() {
     echo "Usage: $0 <command> [arguments]"
     echo ""
     echo "Commands:"
-    echo "  create <name> <tailscale-key>  Create and provision new sandbox"
+    echo "  create <name> <tailscale-key> [--with-gh-creds]  Create and provision new sandbox"
     echo "  migrate <name> <source>        Migrate project into sandbox (creates snapshot first)"
     echo "  shell <name>                   Open bash shell in container"
     echo "  list                           List all sandboxes with status"
@@ -69,13 +69,22 @@ cmd_list() {
 cmd_create() {
     local name="${1:-}"
     local ts_key="${2:-${TAILSCALE_AUTHKEY:-}}"
+    local extra_opts=""
+
+    # Check for --with-gh-creds in any position
+    for arg in "$@"; do
+        if [[ "$arg" == "--with-gh-creds" ]]; then
+            extra_opts="--with-gh-creds"
+        fi
+    done
 
     if [[ -z "$name" ]]; then
-        echo "Usage: $0 create <name> [tailscale-key]"
-        echo "       $0 create <name> --no-tailscale"
+        echo "Usage: $0 create <name> [tailscale-key] [--with-gh-creds]"
+        echo "       $0 create <name> --no-tailscale [--with-gh-creds]"
         echo ""
         echo "Options:"
         echo "  --no-tailscale    Skip Tailscale setup (local development only)"
+        echo "  --with-gh-creds   Copy git credentials (SSH keys, .gitconfig, gh CLI) from host"
         echo ""
         echo "If no key provided, uses TAILSCALE_AUTHKEY from .sandbox.conf"
         exit 1
@@ -87,10 +96,10 @@ cmd_create() {
     # Provision based on options
     if [[ "$ts_key" == "--no-tailscale" ]]; then
         echo -e "${CYAN}Provisioning without Tailscale...${NC}"
-        "$SCRIPT_DIR/03-provision-container.sh" "$name" "--no-tailscale"
-    elif [[ -n "$ts_key" ]]; then
+        "$SCRIPT_DIR/03-provision-container.sh" "$name" "--no-tailscale" $extra_opts
+    elif [[ -n "$ts_key" ]] && [[ "$ts_key" != "--with-gh-creds" ]]; then
         echo -e "${CYAN}Using Tailscale auth key from ${2:+command line}${2:-config}${NC}"
-        "$SCRIPT_DIR/03-provision-container.sh" "$name" "$ts_key"
+        "$SCRIPT_DIR/03-provision-container.sh" "$name" "$ts_key" $extra_opts
     else
         echo "Error: No Tailscale auth key provided"
         echo ""

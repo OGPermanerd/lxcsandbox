@@ -16,7 +16,7 @@
 # Features:
 # - Auto-detects source type (git URL vs local directory)
 # - Clones git repos directly inside container with optional --branch
-# - Copies local directories via tar pipe, excluding node_modules and .git
+# - Copies local directories via tar pipe, excluding node_modules (preserves .git)
 # - Copies .env file separately (may be gitignored)
 # - Detects package manager from lockfile (pnpm > yarn > npm)
 # - Installs Node version from .nvmrc if present
@@ -634,7 +634,7 @@ copy_local_directory() {
     local source_dir="$1"
     local dest_dir="$2"
 
-    log_info "Copying project files (excluding node_modules, .git)..."
+    log_info "Copying project files (excluding node_modules, build artifacts)..."
 
     # Convert to absolute path for tar
     local abs_source
@@ -645,9 +645,9 @@ copy_local_directory() {
 
     # Use tar pipe for reliable transfer with exclusions
     # Key: --exclude before -cf, and use . as source (not path)
+    # Note: .git is NOT excluded - preserving git history for dev workflows
     tar -C "$abs_source" \
         --exclude='node_modules' \
-        --exclude='.git' \
         --exclude='dist' \
         --exclude='build' \
         --exclude='.next' \

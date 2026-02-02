@@ -77,6 +77,9 @@ dev-sandbox-infra/
 # Create and provision in one command
 sudo ./sandbox.sh create relay-dev tskey-auth-xxxxxxx
 
+# With git credentials (SSH keys, .gitconfig, gh CLI) for push/pull
+sudo ./sandbox.sh create relay-dev tskey-auth-xxxxxxx --with-gh-creds
+
 # Or without Tailscale (local development only)
 sudo ./sandbox.sh create relay-dev --no-tailscale
 ```
@@ -98,7 +101,7 @@ sudo ./sandbox.sh migrate relay-dev ~/projects/myproject --force
 
 Migration automatically:
 - Creates pre-migration snapshot (for rollback)
-- Copies files (excluding node_modules, .git, dist, build)
+- Copies files (excluding node_modules, dist, build - preserves .git for syncing)
 - Copies .env file separately (may be gitignored)
 - Detects package manager and runs install
 - Creates PostgreSQL database
