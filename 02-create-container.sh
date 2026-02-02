@@ -283,6 +283,7 @@ install_basic_packages() {
             ca-certificates \
             curl \
             git \
+            mosh \
             openssh-server \
             sudo
 

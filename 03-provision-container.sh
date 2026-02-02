@@ -741,7 +741,7 @@ The dev user has passwordless sudo for any admin tasks.
 ### Other Tools
 - Playwright (Chromium, Firefox)
 - Claude Code CLI
-- git, curl, jq, build-essential
+- git, curl, mosh, build-essential
 
 ## Common Commands
 
