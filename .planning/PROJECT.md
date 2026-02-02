@@ -8,17 +8,7 @@ Infrastructure scripts to create fully isolated development sandboxes on a singl
 
 Complete isolation between projects so Claude Code can run autonomously (`--dangerously-skip-permissions`) without contaminating other environments.
 
-## Current Milestone: v1.2 Auth & Polish
-
-**Goal:** Fix authentication issues so Claude Code and git work out-of-the-box in new containers.
-
-**Target features:**
-- Copy Claude Code credentials (~/.claude) from host to container automatically
-- Copy git credentials (SSH keys, gh CLI auth) from host by default
-- Remove `--with-gh-creds` flag (make credential copying default behavior)
-- Address any tech debt discovered during fixes
-
-## Current State (v1.1 Shipped)
+## Current State (v1.2 Shipped)
 
 **Shipped:** 2026-02-02
 
@@ -33,6 +23,11 @@ Complete isolation between projects so Claude Code can run autonomously (`--dang
 - Package manager detection (npm/yarn/pnpm)
 - Database migration execution (Prisma/Drizzle/raw SQL)
 - Monorepo build support
+
+**Deliverables (v1.2):**
+- Automatic credential copying from host (Claude Code + git)
+- SSH keys, .gitconfig, gh CLI copied to both root and dev users
+- GitHub/GitLab added to known_hosts automatically
 
 **Blocking:** Integration testing on actual LXD host with Tailscale auth key
 
@@ -52,12 +47,13 @@ Complete isolation between projects so Claude Code can run autonomously (`--dang
 - ✓ Package manager detection and dependency installation — v1.1
 - ✓ Database creation and migration execution — v1.1
 - ✓ Monorepo build support — v1.1
+- ✓ Claude Code credentials copied from host automatically — v1.2
+- ✓ Git credentials (SSH keys, gh CLI) copied from host by default — v1.2
+- ✓ GitHub/GitLab added to SSH known_hosts automatically — v1.2
 
 ### Active
 
-- [ ] Claude Code credentials copied from host automatically
-- [ ] Git credentials (SSH keys, gh CLI) copied from host by default
-- [ ] Remove --with-gh-creds flag (credential copying is default)
+(None — ready for next milestone)
 
 ### Out of Scope
 
@@ -104,6 +100,7 @@ Complete isolation between projects so Claude Code can run autonomously (`--dang
 | Native Claude Code installer | Simpler PATH handling than npm | ✓ Good — per RESEARCH.md |
 | trust auth for PostgreSQL | Dev-only environment | ✓ Good — enables Tailscale access |
 | Argument-based CLI | Non-interactive for scriptability | ✓ Good — automation friendly |
+| Default credential copying | Auth should "just work" without flags | ✓ Good — v1.2 |
 
 ---
-*Last updated: 2026-02-02 after v1.2 milestone start*
+*Last updated: 2026-02-02 after v1.2 milestone complete*

@@ -9,13 +9,13 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 
 ## Current Position
 
-Milestone: v1.2 (Auth & Polish)
-Phase: 10 (Credential Setup) COMPLETE
-Plan: 10-01 complete
-Status: v1.2 milestone complete — ready for audit
-Last activity: 2026-02-02 — Phase 10 complete
+Milestone: v1.2 (Auth & Polish) SHIPPED
+Phase: All phases complete
+Plan: All plans complete
+Status: v1.2 milestone shipped — ready for next milestone
+Last activity: 2026-02-02 — v1.2 milestone complete
 
-Progress: [####################] 100% (1/1 phases)
+Progress: [####################] 100% (10/10 phases across v1.0-v1.2)
 
 ## Accumulated Context
 

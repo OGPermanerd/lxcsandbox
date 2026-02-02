@@ -4,11 +4,11 @@
 
 - v1.0 MVP - Phases 1-5 (shipped 2026-02-01)
 - v1.1 Project Migration - Phases 6-9 (shipped 2026-02-02)
-- **v1.2 Auth & Polish** - Phase 10 (active)
+- v1.2 Auth & Polish - Phase 10 (shipped 2026-02-02)
 
 ## Overview
 
-v1.2 fixes authentication issues discovered during real-world usage. Claude Code and git should work out-of-the-box without manual credential setup.
+All milestones shipped. Ready for next milestone.
 
 ## Phases
 
@@ -37,30 +37,16 @@ See: .planning/milestones/v1.0-ROADMAP.md
 
 </details>
 
-### v1.2 Auth & Polish (Active)
+<details>
+<summary>v1.2 Auth & Polish (Phase 10) - SHIPPED 2026-02-02</summary>
+
+See: .planning/milestones/v1.2-ROADMAP.md
 
 **Milestone Goal:** Fix authentication issues so Claude Code and git work out-of-the-box in new containers.
 
 - [x] **Phase 10: Credential Setup** - Copy Claude Code and git credentials from host to container automatically
 
-## Phase Details
-
-### Phase 10: Credential Setup
-
-**Goal**: Claude Code and git work without manual authentication setup
-**Depends on**: Phase 9 (v1.1 complete)
-**Requirements**: CLAUDE-01, CLAUDE-02, CLAUDE-03, GIT-01, GIT-02, GIT-03, GIT-04, GIT-05, DEV-01, DEV-02
-**Plans:** 1 plan
-**Success Criteria** (what must be TRUE):
-  1. New container has ~/.claude copied from host (Claude Code works without /login)
-  2. New container has ~/.ssh copied from host (SSH-based git operations work)
-  3. New container has ~/.config/gh copied from host (gh CLI works)
-  4. SSH known_hosts includes github.com and gitlab.com
-  5. Credentials exist for both root and dev users with correct ownership
-  6. `--with-gh-creds` flag is removed (credential copying is default)
-
-Plans:
-- [x] 10-01-PLAN.md - Add credential copying to container provisioning
+</details>
 
 <details>
 <summary>v1.1 Phase Details (Archived)</summary>
