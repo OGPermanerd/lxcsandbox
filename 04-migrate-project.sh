@@ -746,8 +746,8 @@ transfer_project() {
     # Create database and run migrations (sets DB_NAME, MIGRATION_TOOL)
     setup_database "$dest_dir"
 
-    # Get node version for summary
-    NODE_VERSION=$(container_exec "node --version 2>/dev/null" || echo "not installed")
+    # Get node version for summary (source nvm for non-interactive shell)
+    NODE_VERSION=$(container_exec 'export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"; node --version 2>/dev/null' || echo "not installed")
 
     # Print migration summary
     print_migration_summary "$project_name" "$PKG_MANAGER" "$NODE_VERSION" "$DB_NAME" "$MIGRATION_TOOL"
