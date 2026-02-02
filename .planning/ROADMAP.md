@@ -60,7 +60,7 @@ See: .planning/milestones/v1.0-ROADMAP.md
   6. `--with-gh-creds` flag is removed (credential copying is default)
 
 Plans:
-- [ ] 10-01-PLAN.md - Add credential copying to container provisioning
+- [x] 10-01-PLAN.md - Add credential copying to container provisioning
 
 <details>
 <summary>v1.1 Phase Details (Archived)</summary>
@@ -143,7 +143,7 @@ Plans:
 | 7. Node.js Setup | v1.1 | 1/1 | Complete | 2026-02-01 |
 | 8. Database Integration | v1.1 | 1/1 | Complete | 2026-02-01 |
 | 9. CLI Integration | v1.1 | 1/1 | Complete | 2026-02-01 |
-| 10. Credential Setup | v1.2 | 0/1 | Pending | — |
+| 10. Credential Setup | v1.2 | 1/1 | Planned | — |
 
 ## Requirement Coverage
 
