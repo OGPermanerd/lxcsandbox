@@ -15,7 +15,7 @@ Plan: —
 Status: Defining requirements
 Last activity: 2026-02-02 — Milestone v1.2 started
 
-Progress: [                    ] 0% (0/? phases complete)
+Progress: [                    ] 0% (0/1 phases)
 
 ## Accumulated Context
 

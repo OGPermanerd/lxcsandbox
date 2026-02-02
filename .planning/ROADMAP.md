@@ -3,11 +3,12 @@
 ## Milestones
 
 - v1.0 MVP - Phases 1-5 (shipped 2026-02-01)
-- **v1.1 Project Migration** - Phases 6-9 (complete)
+- v1.1 Project Migration - Phases 6-9 (shipped 2026-02-02)
+- **v1.2 Auth & Polish** - Phase 10 (active)
 
 ## Overview
 
-v1.1 adds project migration capabilities to the existing sandbox infrastructure. Starting with file transfer (git clone or local copy), progressing through Node.js dependency installation and database setup, and finishing with full CLI integration. Each phase delivers a testable capability that enables the next.
+v1.2 fixes authentication issues discovered during real-world usage. Claude Code and git should work out-of-the-box without manual credential setup.
 
 ## Phases
 
@@ -24,7 +25,8 @@ See: .planning/milestones/v1.0-ROADMAP.md
 
 </details>
 
-### v1.1 Project Migration (Complete)
+<details>
+<summary>v1.1 Project Migration (Phases 6-9) - SHIPPED 2026-02-02</summary>
 
 **Milestone Goal:** Migrate existing Node.js projects into isolated LXC sandboxes with automated environment setup.
 
@@ -33,7 +35,35 @@ See: .planning/milestones/v1.0-ROADMAP.md
 - [x] **Phase 8: Database Integration** - Create PostgreSQL database and run migrations
 - [x] **Phase 9: CLI Integration** - Polish sandbox.sh migrate command and user experience
 
+</details>
+
+### v1.2 Auth & Polish (Active)
+
+**Milestone Goal:** Fix authentication issues so Claude Code and git work out-of-the-box in new containers.
+
+- [ ] **Phase 10: Credential Setup** - Copy Claude Code and git credentials from host to container automatically
+
 ## Phase Details
+
+### Phase 10: Credential Setup
+
+**Goal**: Claude Code and git work without manual authentication setup
+**Depends on**: Phase 9 (v1.1 complete)
+**Requirements**: CLAUDE-01, CLAUDE-02, CLAUDE-03, GIT-01, GIT-02, GIT-03, GIT-04, GIT-05, DEV-01, DEV-02
+**Plans:** 1 plan
+**Success Criteria** (what must be TRUE):
+  1. New container has ~/.claude copied from host (Claude Code works without /login)
+  2. New container has ~/.ssh copied from host (SSH-based git operations work)
+  3. New container has ~/.config/gh copied from host (gh CLI works)
+  4. SSH known_hosts includes github.com and gitlab.com
+  5. Credentials exist for both root and dev users with correct ownership
+  6. `--with-gh-creds` flag is removed (credential copying is default)
+
+Plans:
+- [ ] 10-01-PLAN.md - Add credential copying to container provisioning
+
+<details>
+<summary>v1.1 Phase Details (Archived)</summary>
 
 ### Phase 6: Core Transfer
 
@@ -98,6 +128,8 @@ Plans:
 Plans:
 - [x] 09-01-PLAN.md — Add migrate command to sandbox.sh with safety and UX polish
 
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -111,8 +143,20 @@ Plans:
 | 7. Node.js Setup | v1.1 | 1/1 | Complete | 2026-02-01 |
 | 8. Database Integration | v1.1 | 1/1 | Complete | 2026-02-01 |
 | 9. CLI Integration | v1.1 | 1/1 | Complete | 2026-02-01 |
+| 10. Credential Setup | v1.2 | 0/1 | Pending | — |
 
 ## Requirement Coverage
+
+### v1.2 Auth & Polish
+
+All 10 v1.2 requirements mapped:
+
+| Phase | Requirements | Count |
+|-------|--------------|-------|
+| Phase 10 | CLAUDE-01, CLAUDE-02, CLAUDE-03, GIT-01, GIT-02, GIT-03, GIT-04, GIT-05, DEV-01, DEV-02 | 10 |
+| **Total** | | **10** |
+
+### v1.1 Project Migration (Archived)
 
 All 27 v1.1 requirements mapped:
 
@@ -127,3 +171,4 @@ All 27 v1.1 requirements mapped:
 ---
 
 *Created: 2026-02-01 for v1.1 milestone*
+*Updated: 2026-02-02 for v1.2 milestone*
