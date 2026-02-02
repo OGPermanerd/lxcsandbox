@@ -416,6 +416,46 @@ install_claude_code() {
 }
 
 # -------------------------------------------
+# SSH Key Setup
+# -------------------------------------------
+
+# Copy host's authorized SSH keys to container for passwordless access
+setup_ssh_keys() {
+    log_info "Setting up SSH keys..."
+
+    # Create .ssh directory in container
+    container_exec 'mkdir -p ~/.ssh && chmod 700 ~/.ssh'
+
+    # Find authorized_keys from the user who ran sudo (or root)
+    local auth_keys=""
+    local source_user="${SUDO_USER:-root}"
+    local source_home
+
+    if [[ "$source_user" == "root" ]]; then
+        source_home="/root"
+    else
+        source_home=$(getent passwd "$source_user" | cut -d: -f6)
+    fi
+
+    # Check for authorized_keys
+    if [[ -f "$source_home/.ssh/authorized_keys" ]]; then
+        auth_keys="$source_home/.ssh/authorized_keys"
+    elif [[ -f "/root/.ssh/authorized_keys" ]]; then
+        auth_keys="/root/.ssh/authorized_keys"
+    fi
+
+    if [[ -n "$auth_keys" && -f "$auth_keys" ]]; then
+        log_info "Copying SSH keys from $auth_keys"
+        lxc file push "$auth_keys" "$CONTAINER_NAME/root/.ssh/authorized_keys"
+        container_exec 'chmod 600 ~/.ssh/authorized_keys'
+        log_info "SSH keys configured ✓"
+    else
+        log_warn "No authorized_keys found - SSH key auth not configured"
+        log_warn "Add keys manually: lxc exec $CONTAINER_NAME -- nano ~/.ssh/authorized_keys"
+    fi
+}
+
+# -------------------------------------------
 # Shell Configuration (PROV-11)
 # -------------------------------------------
 
@@ -668,6 +708,7 @@ install_postgresql     # Early - apt-based, stable
 install_node           # After apt, provides npm
 install_playwright     # Requires npm
 install_claude_code    # Last - independent
+setup_ssh_keys         # Copy host's authorized keys
 configure_shell        # After all tools installed
 create_claude_md       # Claude Code environment awareness
 
