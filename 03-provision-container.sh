@@ -451,6 +451,42 @@ install_claude_code() {
     fi
 }
 
+# Copy Claude Code credentials from host to container
+copy_claude_credentials() {
+    log_info "Copying Claude Code credentials..."
+
+    # Find credentials from the user who ran sudo (or root)
+    local source_user="${SUDO_USER:-root}"
+    local source_home
+    local creds_file
+
+    if [[ "$source_user" == "root" ]]; then
+        source_home="/root"
+    else
+        source_home=$(getent passwd "$source_user" | cut -d: -f6)
+    fi
+
+    creds_file="$source_home/.claude/.credentials.json"
+
+    if [[ ! -f "$creds_file" ]]; then
+        log_warn "No Claude credentials found at $creds_file"
+        log_warn "You'll need to authenticate Claude Code manually in the container"
+        return 0
+    fi
+
+    # Copy to root user in container
+    container_exec 'mkdir -p ~/.claude && chmod 700 ~/.claude'
+    lxc file push "$creds_file" "$CONTAINER_NAME/root/.claude/.credentials.json"
+    container_exec 'chmod 600 ~/.claude/.credentials.json'
+
+    # Copy to dev user in container
+    container_exec 'mkdir -p /home/dev/.claude && chmod 700 /home/dev/.claude && chown dev:dev /home/dev/.claude'
+    lxc file push "$creds_file" "$CONTAINER_NAME/home/dev/.claude/.credentials.json"
+    container_exec 'chown dev:dev /home/dev/.claude/.credentials.json && chmod 600 /home/dev/.claude/.credentials.json'
+
+    log_info "Claude credentials copied to root and dev users"
+}
+
 # -------------------------------------------
 # Dev User Environment Setup
 # -------------------------------------------
@@ -914,6 +950,7 @@ install_node           # After apt, provides npm for root
 install_playwright     # Requires npm
 install_claude_code    # Claude Code for root
 setup_dev_user_environment  # Node.js and Claude Code for dev user
+copy_claude_credentials    # Copy host's Claude auth to container
 setup_ssh_keys         # Copy host's authorized keys to root and dev
 configure_shell        # After all tools installed
 create_claude_md       # Claude Code environment awareness
