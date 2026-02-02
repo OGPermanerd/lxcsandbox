@@ -579,64 +579,71 @@ setup_dev_user_environment() {
 setup_ssh_keys() {
     log_info "Setting up SSH keys..."
 
-    # Create .ssh directory for root
-    container_exec 'mkdir -p ~/.ssh && chmod 700 ~/.ssh'
-
-    # Find keys from the user who ran sudo (or root)
-    local source_user="${SUDO_USER:-root}"
-    local source_home
+    # Find keys from the user who ran sudo, with fallbacks
+    local source_user="${SUDO_USER:-}"
+    local source_home=""
     local keys_added=0
 
-    if [[ "$source_user" == "root" ]]; then
-        source_home="/root"
-    else
+    # Try SUDO_USER first
+    if [[ -n "$source_user" ]]; then
         source_home=$(getent passwd "$source_user" | cut -d: -f6)
+        log_info "Looking for SSH keys in $source_home/.ssh/ (from SUDO_USER=$source_user)"
     fi
 
-    # Start with empty authorized_keys in container
-    container_exec 'rm -f ~/.ssh/authorized_keys && touch ~/.ssh/authorized_keys'
+    # Fallback: check common locations if SUDO_USER didn't work
+    if [[ -z "$source_home" ]] || [[ ! -d "$source_home/.ssh" ]]; then
+        for try_home in /home/*; do
+            if [[ -d "$try_home/.ssh" ]] && [[ -f "$try_home/.ssh/authorized_keys" || -f "$try_home/.ssh/id_ed25519.pub" || -f "$try_home/.ssh/id_rsa.pub" ]]; then
+                source_home="$try_home"
+                log_info "Found SSH keys in $source_home/.ssh/ (fallback)"
+                break
+            fi
+        done
+    fi
 
-    # 1. Add the host user's public key (for SSH from this host to container)
+    if [[ -z "$source_home" ]] || [[ ! -d "$source_home/.ssh" ]]; then
+        log_warn "No SSH keys found on host - SSH key auth not configured"
+        log_warn "Add keys manually after provisioning"
+        return 0
+    fi
+
+    # Create .ssh directories
+    container_exec 'mkdir -p ~/.ssh && chmod 700 ~/.ssh'
+    container_exec 'mkdir -p /home/dev/.ssh && chmod 700 /home/dev/.ssh && chown dev:dev /home/dev/.ssh'
+
+    # Start with empty authorized_keys
+    container_exec 'rm -f ~/.ssh/authorized_keys /home/dev/.ssh/authorized_keys'
+    container_exec 'touch ~/.ssh/authorized_keys /home/dev/.ssh/authorized_keys'
+
+    # 1. Add host user's public keys
     for pubkey in "$source_home"/.ssh/id_*.pub; do
         if [[ -f "$pubkey" ]]; then
             log_info "Adding public key: $pubkey"
-            lxc file push "$pubkey" "$CONTAINER_NAME/root/.ssh/tmp_key.pub"
-            container_exec 'cat ~/.ssh/tmp_key.pub >> ~/.ssh/authorized_keys && rm ~/.ssh/tmp_key.pub'
+            lxc file push "$pubkey" "$CONTAINER_NAME/home/dev/.ssh/tmp_key.pub"
+            container_exec 'cat /home/dev/.ssh/tmp_key.pub >> /home/dev/.ssh/authorized_keys && rm /home/dev/.ssh/tmp_key.pub'
             ((keys_added++))
         fi
     done
 
-    # 2. Also add authorized_keys (for external access - same users who can SSH to host)
+    # 2. Add authorized_keys (for external access like Termius)
     if [[ -f "$source_home/.ssh/authorized_keys" ]]; then
         log_info "Adding authorized_keys from host"
-        lxc file push "$source_home/.ssh/authorized_keys" "$CONTAINER_NAME/root/.ssh/tmp_auth"
-        container_exec 'cat ~/.ssh/tmp_auth >> ~/.ssh/authorized_keys && rm ~/.ssh/tmp_auth'
+        lxc file push "$source_home/.ssh/authorized_keys" "$CONTAINER_NAME/home/dev/.ssh/tmp_auth"
+        container_exec 'cat /home/dev/.ssh/tmp_auth >> /home/dev/.ssh/authorized_keys && rm /home/dev/.ssh/tmp_auth'
         ((keys_added++))
     fi
 
-    container_exec 'chmod 600 ~/.ssh/authorized_keys'
+    # Set permissions for dev user
+    container_exec 'chown dev:dev /home/dev/.ssh/authorized_keys && chmod 600 /home/dev/.ssh/authorized_keys'
 
-    # Copy SSH keys to dev user as well
-    log_info "Copying SSH keys to dev user..."
-    container_exec '
-        mkdir -p /home/dev/.ssh
-        chmod 700 /home/dev/.ssh
-        chown dev:dev /home/dev/.ssh
-        if [ -f /root/.ssh/authorized_keys ] && [ -s /root/.ssh/authorized_keys ]; then
-            cp /root/.ssh/authorized_keys /home/dev/.ssh/authorized_keys
-            chown dev:dev /home/dev/.ssh/authorized_keys
-            chmod 600 /home/dev/.ssh/authorized_keys
-            echo "SSH keys copied to dev user"
-        else
-            echo "Warning: No authorized_keys to copy"
-        fi
-    '
+    # Copy to root as well (for admin access)
+    container_exec 'cp /home/dev/.ssh/authorized_keys /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys'
 
     if [[ $keys_added -gt 0 ]]; then
-        log_info "SSH keys configured for root and dev ✓ ($keys_added sources)"
+        log_info "SSH keys configured for root and dev ✓ ($keys_added sources from $source_home)"
     else
-        log_warn "No SSH keys found - SSH key auth not configured"
-        log_warn "Add keys manually: lxc exec $CONTAINER_NAME -- nano ~/.ssh/authorized_keys"
+        log_warn "No SSH keys found in $source_home/.ssh/"
+        log_warn "Add keys manually: lxc exec $CONTAINER_NAME -- nano /home/dev/.ssh/authorized_keys"
     fi
 }
 
