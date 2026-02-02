@@ -1,105 +1,58 @@
-# Requirements: v1.1 Project Migration
+# Requirements: v1.2 Auth & Polish
 
-**Defined:** 2026-02-01
-**Core Value:** Migrate existing Node.js projects into isolated LXC sandboxes with automated environment setup
+**Defined:** 2026-02-02
+**Core Value:** Auth should "just work" — no manual setup needed in new containers
 
-## v1.1 Requirements
+## v1.2 Requirements
 
-Requirements for migrating existing projects into containers with full environment setup.
+Requirements for fixing authentication issues discovered during real-world usage.
 
-### Source Handling (SRC)
+### Claude Code Auth (CLAUDE)
 
-- [x] **SRC-01**: Script accepts git repository URL as source
-- [x] **SRC-02**: Script accepts local directory path as source
-- [x] **SRC-03**: Script supports git branch/tag specification with `--branch` flag
-- [x] **SRC-04**: Script clones git repos to `/root/projects/<name>` in container
-- [x] **SRC-05**: Script copies local directories via rsync (excludes node_modules, .git)
-- [x] **SRC-06**: Script detects if project already exists and offers re-migration options
+- [ ] **CLAUDE-01**: Container has ~/.claude directory copied from host (if exists)
+- [ ] **CLAUDE-02**: Claude Code works without manual `/login` in new containers
+- [ ] **CLAUDE-03**: Auth copying is automatic during container creation
 
-### Node.js Setup (NODE)
+### Git Auth (GIT)
 
-- [x] **NODE-01**: Script detects package manager from lock files (npm/yarn/pnpm)
-- [x] **NODE-02**: Script runs appropriate install command (npm install, yarn, pnpm install)
-- [x] **NODE-03**: Script detects .nvmrc and installs specified Node version if different
-- [x] **NODE-04**: Script verifies node_modules exists after install
+- [ ] **GIT-01**: Container has ~/.ssh directory copied from host (if exists)
+- [ ] **GIT-02**: Container has ~/.config/gh directory copied from host (if exists)
+- [ ] **GIT-03**: SSH known_hosts includes github.com and gitlab.com
+- [ ] **GIT-04**: Git push/pull works without manual credential setup
+- [ ] **GIT-05**: `--with-gh-creds` flag removed (credential copying is default)
 
-### Environment Setup (ENV)
+### Dev User (DEV)
 
-- [x] **ENV-01**: Script copies .env file from source to container
-- [x] **ENV-02**: Script falls back to .env.example if .env missing
-- [x] **ENV-03**: Script generates DATABASE_URL for PostgreSQL connection
-- [x] **ENV-04**: Script appends DATABASE_URL to .env if not present
-- [x] **ENV-05**: Script preserves existing environment variables unchanged
-
-### Database Integration (DB)
-
-- [x] **DB-01**: Script creates PostgreSQL database with sanitized project name
-- [x] **DB-02**: Script detects Prisma by presence of prisma/ directory
-- [x] **DB-03**: Script detects Drizzle by presence of drizzle/ or drizzle.config.*
-- [x] **DB-04**: Script runs `npx prisma migrate deploy` for Prisma projects
-- [x] **DB-05**: Script runs `npx drizzle-kit push` for Drizzle projects
-- [x] **DB-06**: Script detects raw SQL migrations in migrations/ directory
-- [x] **DB-07**: Script runs raw SQL migrations in alphabetical order
-
-### CLI Integration (CLI)
-
-- [x] **CLI-01**: sandbox.sh migrate command accepts container name and source
-- [x] **CLI-02**: sandbox.sh migrate calls 04-migrate-project.sh backend
-- [x] **CLI-03**: Script creates pre-migration snapshot automatically
-- [x] **CLI-04**: Script outputs clear success/error messages with next steps
-- [x] **CLI-05**: Script provides migration summary (detected tools, actions taken)
+- [ ] **DEV-01**: Credentials copied to both root and dev users
+- [ ] **DEV-02**: Correct ownership set on copied credential files
 
 ## Traceability
 
-| Requirement | Phase | Priority | Status |
-|-------------|-------|----------|--------|
-| SRC-01 | Phase 6 | Must Have | Complete |
-| SRC-02 | Phase 6 | Must Have | Complete |
-| SRC-03 | Phase 6 | Must Have | Complete |
-| SRC-04 | Phase 6 | Must Have | Complete |
-| SRC-05 | Phase 6 | Must Have | Complete |
-| SRC-06 | Phase 9 | Should Have | Complete |
-| NODE-01 | Phase 7 | Must Have | Complete |
-| NODE-02 | Phase 7 | Must Have | Complete |
-| NODE-03 | Phase 7 | Should Have | Complete |
-| NODE-04 | Phase 7 | Must Have | Complete |
-| ENV-01 | Phase 6 | Must Have | Complete |
-| ENV-02 | Phase 7 | Should Have | Complete |
-| ENV-03 | Phase 8 | Must Have | Complete |
-| ENV-04 | Phase 8 | Must Have | Complete |
-| ENV-05 | Phase 6 | Must Have | Complete |
-| DB-01 | Phase 8 | Must Have | Complete |
-| DB-02 | Phase 8 | Must Have | Complete |
-| DB-03 | Phase 8 | Must Have | Complete |
-| DB-04 | Phase 8 | Must Have | Complete |
-| DB-05 | Phase 8 | Must Have | Complete |
-| DB-06 | Phase 8 | Should Have | Complete |
-| DB-07 | Phase 8 | Should Have | Complete |
-| CLI-01 | Phase 9 | Must Have | Complete |
-| CLI-02 | Phase 9 | Must Have | Complete |
-| CLI-03 | Phase 9 | Must Have | Complete |
-| CLI-04 | Phase 9 | Must Have | Complete |
-| CLI-05 | Phase 9 | Must Have | Complete |
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| CLAUDE-01 | Phase 10 | Pending |
+| CLAUDE-02 | Phase 10 | Pending |
+| CLAUDE-03 | Phase 10 | Pending |
+| GIT-01 | Phase 10 | Pending |
+| GIT-02 | Phase 10 | Pending |
+| GIT-03 | Phase 10 | Pending |
+| GIT-04 | Phase 10 | Pending |
+| GIT-05 | Phase 10 | Pending |
+| DEV-01 | Phase 10 | Pending |
+| DEV-02 | Phase 10 | Pending |
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Production data migration | Security risk; migrations only, fresh DB |
-| Interactive setup wizard | Breaks scriptability; use flags |
-| Docker Compose translation | LXC != Docker; fundamentally different |
-| Remote database migration | Security risk; local only |
-| Custom migration frameworks | Support Prisma, Drizzle, raw SQL only |
-| Multi-project containers | Defeats isolation purpose |
+| API key management | Credentials copied as-is, not managed |
+| Token refresh automation | User handles token expiry on host |
+| Multiple git identities | Copy what exists, don't manage profiles |
 
 ## Coverage Summary
 
-- **Total requirements:** 27
-- **Phase 6 (Core Transfer):** 7 requirements
-- **Phase 7 (Node.js Setup):** 5 requirements
-- **Phase 8 (Database Integration):** 9 requirements
-- **Phase 9 (CLI Integration):** 6 requirements
+- **Total requirements:** 10
+- **Phase 10 (Credential Setup):** 10 requirements
 
 ---
-*Created: 2026-02-01 for v1.1 milestone*
-*Updated: 2026-02-01 with phase traceability*
+*Created: 2026-02-02 for v1.2 milestone*
