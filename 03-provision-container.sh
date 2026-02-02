@@ -633,12 +633,26 @@ setup_ssh_keys() {
     done
 
     # 2. Add authorized_keys (for external access like Termius)
-    if [[ -f "$source_home/.ssh/authorized_keys" ]]; then
-        log_info "Adding authorized_keys from host"
-        lxc file push "$source_home/.ssh/authorized_keys" "$CONTAINER_NAME/home/dev/.ssh/tmp_auth"
-        container_exec 'cat /home/dev/.ssh/tmp_auth >> /home/dev/.ssh/authorized_keys && rm /home/dev/.ssh/tmp_auth'
+    # Check all home directories for authorized_keys, not just the sudo user's
+    # Collect all unique keys to avoid duplicates
+    local temp_keys=$(mktemp)
+    local auth_keys_found=false
+    for check_home in "$source_home" /home/*; do
+        if [[ -f "$check_home/.ssh/authorized_keys" ]] && [[ -r "$check_home/.ssh/authorized_keys" ]]; then
+            log_info "Found authorized_keys in $check_home/.ssh/"
+            cat "$check_home/.ssh/authorized_keys" >> "$temp_keys"
+            auth_keys_found=true
+        fi
+    done
+    if [[ "$auth_keys_found" == "true" ]]; then
+        # Deduplicate and append to container
+        sort -u "$temp_keys" | lxc exec "$CONTAINER_NAME" -- tee -a /home/dev/.ssh/authorized_keys > /dev/null
         ((keys_added++))
+        log_info "Added authorized_keys for external SSH access"
+    else
+        log_warn "No authorized_keys found on host - external SSH access (like Termius) may not work"
     fi
+    rm -f "$temp_keys"
 
     # Set permissions for dev user
     container_exec 'chown dev:dev /home/dev/.ssh/authorized_keys && chmod 600 /home/dev/.ssh/authorized_keys'

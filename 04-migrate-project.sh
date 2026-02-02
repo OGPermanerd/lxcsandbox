@@ -579,9 +579,8 @@ setup_database() {
     # Step 4: Append DATABASE_URL to .env
     append_database_url_to_env "$project_dir" "$database_url"
 
-    # Step 5: Detect and run migrations
-    MIGRATION_TOOL=$(detect_migration_tool "$project_dir")
-    log_info "Detected migration tool: $MIGRATION_TOOL"
+    # Step 5: Run migrations (MIGRATION_TOOL already detected by caller)
+    log_info "Running migrations with: $MIGRATION_TOOL"
 
     case "$MIGRATION_TOOL" in
         prisma)
@@ -769,11 +768,22 @@ transfer_project() {
     lxc exec "$CONTAINER_NAME" -- ls -la "$dest_dir" | head -15
     echo ""
 
-    # Install Node.js dependencies (sets PKG_MANAGER)
-    setup_nodejs_dependencies "$dest_dir"
+    # Install Node.js dependencies only if package.json exists (sets PKG_MANAGER)
+    if lxc exec "$CONTAINER_NAME" -- test -f "$dest_dir/package.json"; then
+        setup_nodejs_dependencies "$dest_dir"
+    else
+        log_info "No package.json found - skipping Node.js setup"
+        PKG_MANAGER=""
+    fi
 
-    # Create database and run migrations (sets DB_NAME, MIGRATION_TOOL)
-    setup_database "$dest_dir"
+    # Create database and run migrations only if migration tool detected (sets DB_NAME, MIGRATION_TOOL)
+    MIGRATION_TOOL=$(detect_migration_tool "$dest_dir")
+    if [[ "$MIGRATION_TOOL" != "none" ]]; then
+        setup_database "$dest_dir"
+    else
+        log_info "No database migrations detected - skipping database setup"
+        DB_NAME=""
+    fi
 
     # Get node version for summary (source nvm for non-interactive shell)
     NODE_VERSION=$(container_exec 'export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"; node --version 2>/dev/null' || echo "not installed")
