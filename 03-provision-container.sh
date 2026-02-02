@@ -419,17 +419,17 @@ install_claude_code() {
 # SSH Key Setup
 # -------------------------------------------
 
-# Copy host's authorized SSH keys to container for passwordless access
+# Copy SSH keys to container for passwordless access
 setup_ssh_keys() {
     log_info "Setting up SSH keys..."
 
     # Create .ssh directory in container
     container_exec 'mkdir -p ~/.ssh && chmod 700 ~/.ssh'
 
-    # Find authorized_keys from the user who ran sudo (or root)
-    local auth_keys=""
+    # Find keys from the user who ran sudo (or root)
     local source_user="${SUDO_USER:-root}"
     local source_home
+    local keys_added=0
 
     if [[ "$source_user" == "root" ]]; then
         source_home="/root"
@@ -437,20 +437,33 @@ setup_ssh_keys() {
         source_home=$(getent passwd "$source_user" | cut -d: -f6)
     fi
 
-    # Check for authorized_keys
+    # Start with empty authorized_keys in container
+    container_exec 'rm -f ~/.ssh/authorized_keys && touch ~/.ssh/authorized_keys'
+
+    # 1. Add the host user's public key (for SSH from this host to container)
+    for pubkey in "$source_home"/.ssh/id_*.pub; do
+        if [[ -f "$pubkey" ]]; then
+            log_info "Adding public key: $pubkey"
+            lxc file push "$pubkey" "$CONTAINER_NAME/root/.ssh/tmp_key.pub"
+            container_exec 'cat ~/.ssh/tmp_key.pub >> ~/.ssh/authorized_keys && rm ~/.ssh/tmp_key.pub'
+            ((keys_added++))
+        fi
+    done
+
+    # 2. Also add authorized_keys (for external access - same users who can SSH to host)
     if [[ -f "$source_home/.ssh/authorized_keys" ]]; then
-        auth_keys="$source_home/.ssh/authorized_keys"
-    elif [[ -f "/root/.ssh/authorized_keys" ]]; then
-        auth_keys="/root/.ssh/authorized_keys"
+        log_info "Adding authorized_keys from host"
+        lxc file push "$source_home/.ssh/authorized_keys" "$CONTAINER_NAME/root/.ssh/tmp_auth"
+        container_exec 'cat ~/.ssh/tmp_auth >> ~/.ssh/authorized_keys && rm ~/.ssh/tmp_auth'
+        ((keys_added++))
     fi
 
-    if [[ -n "$auth_keys" && -f "$auth_keys" ]]; then
-        log_info "Copying SSH keys from $auth_keys"
-        lxc file push "$auth_keys" "$CONTAINER_NAME/root/.ssh/authorized_keys"
-        container_exec 'chmod 600 ~/.ssh/authorized_keys'
-        log_info "SSH keys configured ✓"
+    container_exec 'chmod 600 ~/.ssh/authorized_keys'
+
+    if [[ $keys_added -gt 0 ]]; then
+        log_info "SSH keys configured ✓ ($keys_added sources)"
     else
-        log_warn "No authorized_keys found - SSH key auth not configured"
+        log_warn "No SSH keys found - SSH key auth not configured"
         log_warn "Add keys manually: lxc exec $CONTAINER_NAME -- nano ~/.ssh/authorized_keys"
     fi
 }
