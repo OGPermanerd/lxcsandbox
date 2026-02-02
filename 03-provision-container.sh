@@ -535,6 +535,15 @@ setup_dev_user_environment() {
     else
         log_warn "Claude Code installation for dev user may have failed"
     fi
+
+    # Install Get Shit Done (GSD) for Claude Code
+    log_info "Installing Get Shit Done (GSD) for Claude Code..."
+    container_exec_as_dev '
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        npx get-shit-done-cc --claude --global
+    '
+    log_info "GSD installed - use /gsd:help in Claude Code"
 }
 
 # -------------------------------------------
@@ -790,7 +799,7 @@ The dev user has passwordless sudo for any admin tasks.
 
 ### Other Tools
 - Playwright (Chromium, Firefox)
-- Claude Code CLI
+- Claude Code CLI with Get Shit Done (GSD) - use /gsd:help
 - git, curl, mosh, build-essential
 
 ## Common Commands
