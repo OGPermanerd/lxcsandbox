@@ -25,7 +25,7 @@
 # - Creates PostgreSQL database with sanitized project name
 # - Runs database migrations (Prisma, Drizzle, or raw SQL)
 # - Appends DATABASE_URL to .env if not present
-# - Destination is always /root/projects/<project-name>
+# - Destination is always /home/dev/projects/<project-name>
 #
 
 set -euo pipefail
@@ -73,7 +73,7 @@ if [[ $# -lt 2 ]]; then
     echo "  # Force re-migration (delete existing project)"
     echo "  ./04-migrate-project.sh relay-dev https://github.com/user/project.git --force"
     echo ""
-    echo "Destination: /root/projects/<project-name> inside container"
+    echo "Destination: /home/dev/projects/<project-name> inside container"
     exit 1
 fi
 
@@ -310,21 +310,31 @@ install_dependencies() {
     log_info "Dependencies installed successfully"
 }
 
-# Copy .env.example to .env if .env doesn't exist
+# Copy .env.example to .env if no env file exists
+# Skips if .env or .env.local already present (frameworks like Next.js use .env.local)
 copy_env_example_if_needed() {
     local project_dir="$1"
 
-    # Check if .env does NOT exist AND .env.example exists
-    if ! lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/.env"; then
+    # Check if either .env or .env.local exists
+    local has_env=false
+    if lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/.env"; then
+        log_info ".env file exists"
+        has_env=true
+    fi
+    if lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/.env.local"; then
+        log_info ".env.local file exists"
+        has_env=true
+    fi
+
+    # Only create .env from example if no env files exist
+    if [[ "$has_env" == "false" ]]; then
         if lxc exec "$CONTAINER_NAME" -- test -f "$project_dir/.env.example"; then
-            log_info "No .env found, copying from .env.example..."
+            log_info "No .env or .env.local found, copying from .env.example..."
             container_exec "cp '$project_dir/.env.example' '$project_dir/.env'"
             log_warn ".env created from .env.example - review and update values"
         else
-            log_warn "No .env or .env.example found"
+            log_warn "No .env, .env.local, or .env.example found"
         fi
-    else
-        log_info ".env file exists"
     fi
 }
 
@@ -649,7 +659,8 @@ copy_local_directory() {
     log_info "Project copied to $CONTAINER_NAME:$dest_dir"
 }
 
-# Copy .env file separately (may be gitignored)
+# Copy .env files separately (may be gitignored)
+# Copies .env and .env.local if they exist
 copy_env_file() {
     local source_dir="$1"
     local dest_dir="$2"
@@ -658,12 +669,26 @@ copy_env_file() {
     local abs_source
     abs_source="$(cd "$source_dir" && pwd)"
 
+    local found_env=false
+
+    # Copy .env if exists
     if [[ -f "$abs_source/.env" ]]; then
         log_info "Copying .env file..."
         lxc file push "$abs_source/.env" "$CONTAINER_NAME$dest_dir/.env"
         log_info ".env copied to container"
-    else
-        log_warn "No .env file found in source"
+        found_env=true
+    fi
+
+    # Copy .env.local if exists (Next.js, Vite, etc.)
+    if [[ -f "$abs_source/.env.local" ]]; then
+        log_info "Copying .env.local file..."
+        lxc file push "$abs_source/.env.local" "$CONTAINER_NAME$dest_dir/.env.local"
+        log_info ".env.local copied to container"
+        found_env=true
+    fi
+
+    if [[ "$found_env" == "false" ]]; then
+        log_warn "No .env or .env.local file found in source"
         if [[ -f "$abs_source/.env.example" ]]; then
             log_info ".env.example exists - will be copied during Node.js setup"
         fi
@@ -680,7 +705,7 @@ transfer_project() {
 
     local project_name
     project_name=$(derive_project_name "$SOURCE")
-    local dest_dir="/root/projects/$project_name"
+    local dest_dir="/home/dev/projects/$project_name"
 
     log_info "=== Project Migration ==="
     log_info "Container: $CONTAINER_NAME"
@@ -707,7 +732,7 @@ transfer_project() {
     fi
 
     # Create projects directory
-    container_exec "mkdir -p /root/projects"
+    container_exec "mkdir -p /home/dev/projects"
 
     case "$source_type" in
         git)
@@ -730,6 +755,10 @@ transfer_project() {
         log_error "Transfer failed - destination directory not created"
         exit 1
     fi
+
+    # Set ownership to dev user
+    log_info "Setting ownership to dev user..."
+    container_exec "chown -R dev:dev /home/dev/projects"
 
     # Show what was transferred
     echo ""
@@ -756,9 +785,14 @@ transfer_project() {
     log_info "=== Migration Complete ==="
     log_info "Project is ready at: $CONTAINER_NAME:$dest_dir"
     echo ""
-    log_info "To access the project:"
-    echo "  lxc exec $CONTAINER_NAME -- bash"
-    echo "  cd $dest_dir"
+    log_info "To access the project (as dev user for Claude Code):"
+    echo "  lxc exec $CONTAINER_NAME -- su - dev"
+    echo "  cd ~/projects/$project_name"
+    echo ""
+    log_info "Or via SSH:"
+    echo "  ssh dev@\$(lxc exec $CONTAINER_NAME -- tailscale ip -4 2>/dev/null)"
+    echo "  cd ~/projects/$project_name"
+    echo "  claude --dangerously-skip-permissions"
 }
 
 # -------------------------------------------

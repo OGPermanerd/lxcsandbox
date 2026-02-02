@@ -1,5 +1,19 @@
 # Dev Sandbox Infrastructure
 
+## Claude Code Instructions
+
+When you need me to run a command that requires elevated privileges (sudo) or must be run on the VPS host, **always append a tee to a log file** so I can just tell you when to check the log instead of copy-pasting output:
+
+```bash
+# Good - I can just say "check the log"
+sudo ./sandbox.sh migrate test-sandbox ~/projects/relay 2>&1 | tee -a ~/sandbox-ops.log
+
+# Bad - requires me to copy-paste potentially long output
+sudo ./sandbox.sh migrate test-sandbox ~/projects/relay
+```
+
+This minimizes my wait time and copy-paste overhead.
+
 ## Project Objective
 
 Create fully isolated development sandboxes on a single Hetzner VPS using LXC containers, where each sandbox:
@@ -41,16 +55,16 @@ Each container binds to standard ports (3000, 5432, etc.) with no conflicts beca
 ```
 dev-sandbox-infra/
 ├── CLAUDE.md                    # This file - project context
+├── sandbox.sh                   # PRIMARY INTERFACE - wrapper for all operations
 ├── 01-setup-host.sh            # One-time host infrastructure setup
 ├── 02-create-container.sh      # Creates new LXC container with networking
 ├── 03-provision-container.sh   # Installs dev stack inside container
-├── config/
-│   └── container-packages.txt  # List of apt packages to install
-└── templates/
-    └── bashrc-additions.sh     # Shell customizations for containers
+└── 04-migrate-project.sh       # Migrates project into container
 ```
 
 ## Usage
+
+**Use `sandbox.sh` for all operations** - it wraps the individual scripts and adds safety features like automatic snapshots.
 
 ### Initial Setup (once per VPS)
 ```bash
@@ -60,22 +74,62 @@ dev-sandbox-infra/
 
 ### Create New Sandbox
 ```bash
-# Create container named "relay-dev"
-./02-create-container.sh relay-dev
+# Create and provision in one command
+sudo ./sandbox.sh create relay-dev tskey-auth-xxxxxxx
 
-# Provision with dev tools (run from host, executes inside container)
-./03-provision-container.sh relay-dev tskey-auth-xxxxxxx
+# Or without Tailscale (local development only)
+sudo ./sandbox.sh create relay-dev --no-tailscale
 ```
+
+### Migrate Project into Sandbox
+```bash
+# From git URL
+sudo ./sandbox.sh migrate relay-dev https://github.com/user/project.git
+
+# From local directory
+sudo ./sandbox.sh migrate relay-dev ~/projects/myproject
+
+# With specific branch
+sudo ./sandbox.sh migrate relay-dev https://github.com/user/project.git --branch main
+
+# Force re-migration (overwrites existing)
+sudo ./sandbox.sh migrate relay-dev ~/projects/myproject --force
+```
+
+Migration automatically:
+- Creates pre-migration snapshot (for rollback)
+- Copies files (excluding node_modules, .git, dist, build)
+- Copies .env file separately (may be gitignored)
+- Detects package manager and runs install
+- Creates PostgreSQL database
+- Runs migrations (Prisma/Drizzle/raw SQL if detected)
 
 ### Access Sandbox
 ```bash
-# From your local machine (with Tailscale)
-ssh relay-dev                        # MagicDNS name
-ssh root@100.64.x.x                  # Direct Tailscale IP
+# For Claude Code (use dev user - required for YOLO mode)
+ssh dev@relay-dev                    # MagicDNS name
+ssh dev@100.64.x.x                   # Direct Tailscale IP
+cd ~/projects/<name>
+claude --dangerously-skip-permissions
+
+# For admin tasks (root)
+ssh root@relay-dev
+ssh root@100.64.x.x
+
+# Web access
 http://relay-dev:3000                # Web app in browser
 
-# Or from host
-lxc exec relay-dev -- bash
+# Or via sandbox.sh
+./sandbox.sh shell relay-dev         # Opens bash in container
+./sandbox.sh info relay-dev          # Shows details and Tailscale IP
+```
+
+### Other Operations
+```bash
+./sandbox.sh list                           # List all sandboxes
+./sandbox.sh snapshot relay-dev my-snapshot # Create snapshot
+./sandbox.sh restore relay-dev my-snapshot  # Restore (auto-backups first)
+./sandbox.sh delete relay-dev               # Delete (prompts for confirmation)
 ```
 
 ## Key Design Decisions
@@ -103,29 +157,12 @@ Scripts expect these (or will prompt):
 
 ## Common Operations
 
-### List all sandboxes
-```bash
-lxc list
-```
+All operations use `sandbox.sh` - see Usage section above. Raw `lxc` commands are available if needed:
 
-### Snapshot before risky operation
 ```bash
-lxc snapshot relay-dev before-migration
-```
-
-### Restore from snapshot
-```bash
-lxc restore relay-dev before-migration
-```
-
-### Delete sandbox
-```bash
-lxc delete relay-dev --force
-```
-
-### Copy sandbox as template
-```bash
-lxc copy relay-dev relay-template
+lxc list                              # List containers
+lxc copy relay-dev relay-template     # Copy as template
+lxc exec relay-dev -- bash            # Shell access
 ```
 
 ## Troubleshooting

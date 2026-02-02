@@ -107,9 +107,14 @@ fi
 # Helper Functions
 # -------------------------------------------
 
-# Execute command inside the container
+# Execute command inside the container (as root)
 container_exec() {
     lxc exec "$CONTAINER_NAME" -- bash -c "$1"
+}
+
+# Execute command inside the container as dev user
+container_exec_as_dev() {
+    lxc exec "$CONTAINER_NAME" -- su - dev -c "$1"
 }
 
 # Wait for apt lock to be released (cloud-init may be running)
@@ -138,6 +143,37 @@ validate_tun_device() {
     fi
 
     log_info "TUN device available"
+}
+
+# -------------------------------------------
+# Dev User Setup
+# -------------------------------------------
+
+# Create non-root dev user for Claude Code YOLO mode
+# Claude Code's --dangerously-skip-permissions doesn't work as root
+create_dev_user() {
+    log_info "Creating dev user..."
+
+    # Check if user already exists
+    if container_exec 'id dev &>/dev/null'; then
+        log_info "Dev user already exists"
+        return 0
+    fi
+
+    container_exec '
+        # Create dev user with home directory and bash shell
+        useradd -m -s /bin/bash dev
+
+        # Add to sudo group with passwordless sudo
+        echo "dev ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/dev
+        chmod 440 /etc/sudoers.d/dev
+
+        # Create projects directory
+        mkdir -p /home/dev/projects
+        chown dev:dev /home/dev/projects
+    '
+
+    log_info "Dev user created with passwordless sudo"
 }
 
 # -------------------------------------------
@@ -416,14 +452,50 @@ install_claude_code() {
 }
 
 # -------------------------------------------
+# Dev User Environment Setup
+# -------------------------------------------
+
+# Set up Node.js, Claude Code, etc. for the dev user
+# This runs after root installations are complete
+setup_dev_user_environment() {
+    log_info "Setting up dev user environment..."
+
+    # Install nvm for dev user
+    log_info "Installing nvm for dev user..."
+    container_exec_as_dev "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/$NVM_VERSION/install.sh | bash"
+
+    # Install Node.js for dev user
+    log_info "Installing Node.js $NODE_VERSION for dev user..."
+    container_exec_as_dev '
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        nvm install '"$NODE_VERSION"'
+        nvm alias default '"$NODE_VERSION"'
+        nvm use default
+        corepack enable
+    '
+
+    # Install Claude Code for dev user
+    log_info "Installing Claude Code for dev user..."
+    container_exec_as_dev 'curl -fsSL https://claude.ai/install.sh | bash'
+
+    # Verify Claude Code installation
+    if container_exec_as_dev '[ -f "$HOME/.local/bin/claude" ]'; then
+        log_info "Claude Code installed for dev user"
+    else
+        log_warn "Claude Code installation for dev user may have failed"
+    fi
+}
+
+# -------------------------------------------
 # SSH Key Setup
 # -------------------------------------------
 
-# Copy SSH keys to container for passwordless access
+# Copy SSH keys to container for passwordless access (root and dev)
 setup_ssh_keys() {
     log_info "Setting up SSH keys..."
 
-    # Create .ssh directory in container
+    # Create .ssh directory for root
     container_exec 'mkdir -p ~/.ssh && chmod 700 ~/.ssh'
 
     # Find keys from the user who ran sudo (or root)
@@ -460,8 +532,17 @@ setup_ssh_keys() {
 
     container_exec 'chmod 600 ~/.ssh/authorized_keys'
 
+    # Copy SSH keys to dev user as well
+    container_exec '
+        mkdir -p /home/dev/.ssh
+        cp /root/.ssh/authorized_keys /home/dev/.ssh/authorized_keys 2>/dev/null || true
+        chown -R dev:dev /home/dev/.ssh
+        chmod 700 /home/dev/.ssh
+        chmod 600 /home/dev/.ssh/authorized_keys 2>/dev/null || true
+    '
+
     if [[ $keys_added -gt 0 ]]; then
-        log_info "SSH keys configured ✓ ($keys_added sources)"
+        log_info "SSH keys configured for root and dev ✓ ($keys_added sources)"
     else
         log_warn "No SSH keys found - SSH key auth not configured"
         log_warn "Add keys manually: lxc exec $CONTAINER_NAME -- nano ~/.ssh/authorized_keys"
@@ -524,7 +605,71 @@ SHELL_CONFIG
         fi
     '
 
-    log_info "Shell environment configured"
+    # Also configure dev user's bashrc
+    container_exec '
+        DEV_BASHRC="/home/dev/.bashrc"
+        MARKER="# Dev Sandbox Environment"
+
+        if ! grep -q "$MARKER" "$DEV_BASHRC" 2>/dev/null; then
+            cat >> "$DEV_BASHRC" << '"'"'SHELL_CONFIG'"'"'
+
+# Dev Sandbox Environment
+# Added by 03-provision-container.sh
+
+# Database environment variables
+export PGHOST=localhost
+export PGPORT=5432
+export PGUSER=dev
+export PGPASSWORD=dev
+export PGDATABASE=dev
+export DATABASE_URL="postgresql://dev:dev@localhost:5432/dev"
+
+# Node.js via nvm (auto-load)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+# Claude Code
+export PATH="$HOME/.local/bin:$PATH"
+
+# Useful aliases
+alias ll="ls -la"
+alias pg="psql -U dev dev"
+alias pgstart="sudo systemctl start postgresql"
+alias pgstop="sudo systemctl stop postgresql"
+alias pgstatus="sudo systemctl status postgresql"
+alias tsstatus="tailscale status"
+alias tsip="tailscale ip -4"
+
+# Dev helper aliases
+alias npmi="npm install"
+alias npmr="npm run"
+alias pnpmi="pnpm install"
+alias yarni="yarn install"
+
+SHELL_CONFIG
+            chown dev:dev "$DEV_BASHRC"
+        fi
+    '
+
+    # Also add ~/.local/bin to /etc/environment for non-interactive shells
+    # This ensures 'claude' command works in all contexts (lxc exec, scripts, etc.)
+    # Include both root and dev user paths
+    container_exec '
+        if ! grep -q "/.local/bin" /etc/environment 2>/dev/null; then
+            # Append PATH modification to /etc/environment
+            if grep -q "^PATH=" /etc/environment; then
+                # PATH exists, prepend ~/.local/bin to it
+                sed -i "s|^PATH=\"|PATH=\"/home/dev/.local/bin:/root/.local/bin:|" /etc/environment
+            else
+                # No PATH line, add one
+                echo "PATH=\"/home/dev/.local/bin:/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"" >> /etc/environment
+            fi
+            echo "Added ~/.local/bin to /etc/environment"
+        fi
+    '
+
+    log_info "Shell environment configured for root and dev"
 }
 
 # Create CLAUDE.md for Claude Code awareness
@@ -540,16 +685,43 @@ create_claude_md() {
     # Ensure ~/.claude directory exists (created by Claude Code installer)
     container_exec 'mkdir -p ~/.claude'
 
-    container_exec "cat > ~/.claude/CLAUDE.md << 'CLAUDE_CONFIG'
-# Dev Sandbox Environment
+    # Create CLAUDE.md content
+    local claude_md_content="# Dev Sandbox Environment
 
-This is an isolated LXC container for development. You have full root access.
+This is an isolated LXC container for development.
+
+## Claude Code Instructions
+
+When suggesting commands that the user must run manually (e.g., on the host, or commands requiring user interaction), **always append tee to a log file** so the user can just tell you when to check the log:
+
+\\\`\\\`\\\`bash
+# Good - user says \"check the log\" when done
+sudo some-command 2>&1 | tee -a ~/ops.log
+
+# Bad - requires copy-pasting potentially long output
+sudo some-command
+\\\`\\\`\\\`
+
+This minimizes user wait time and copy-paste overhead.
 
 ## System
 - **Container:** $container_name
 - **OS:** Ubuntu 24.04 LTS
 - **Tailscale IP:** $tailscale_ip
-- **User:** root
+- **Users:** root (admin), dev (for Claude Code)
+
+## IMPORTANT: Use 'dev' user for Claude Code
+
+Claude Code's \\\`--dangerously-skip-permissions\\\` mode (YOLO mode) does not work as root.
+**Always SSH as the dev user when using Claude Code:**
+
+\\\`\\\`\\\`bash
+ssh dev@$tailscale_ip
+cd ~/projects/<name>
+claude --dangerously-skip-permissions
+\\\`\\\`\\\`
+
+The dev user has passwordless sudo for any admin tasks.
 
 ## Installed Tools
 
@@ -573,7 +745,7 @@ This is an isolated LXC container for development. You have full root access.
 
 ## Common Commands
 
-\`\`\`bash
+\\\`\\\`\\\`bash
 # Database
 psql -U dev dev              # Connect to PostgreSQL
 pg                           # Alias for above
@@ -587,27 +759,36 @@ tailscale status             # Check connection
 tailscale ip -4              # Get Tailscale IP
 
 # Project location
-cd /root/projects/<name>     # Migrated projects go here
-\`\`\`
+cd ~/projects/<name>         # Migrated projects go here
+\\\`\\\`\\\`
 
 ## Environment Variables
 
 These are pre-configured in ~/.bashrc:
-- \`DATABASE_URL\` - PostgreSQL connection string
-- \`PGHOST\`, \`PGPORT\`, \`PGUSER\`, \`PGPASSWORD\`, \`PGDATABASE\`
-- \`NVM_DIR\` - nvm installation directory
+- \\\`DATABASE_URL\\\` - PostgreSQL connection string
+- \\\`PGHOST\\\`, \\\`PGPORT\\\`, \\\`PGUSER\\\`, \\\`PGPASSWORD\\\`, \\\`PGDATABASE\\\`
+- \\\`NVM_DIR\\\` - nvm installation directory
 
 ## Notes
 
 - This container is ephemeral - create snapshots before risky operations
 - PostgreSQL uses trust auth locally, password auth for Tailscale connections
-- Projects are migrated to /root/projects/<project-name>
-CLAUDE_CONFIG"
+- Projects are migrated to /home/dev/projects/<project-name>
+- Use dev user for Claude Code YOLO mode, root for admin tasks"
 
-    # Also symlink to home directory for visibility
+    # Write to root's .claude directory
+    container_exec "mkdir -p ~/.claude && cat > ~/.claude/CLAUDE.md << 'CLAUDE_CONFIG'
+$claude_md_content
+CLAUDE_CONFIG"
     container_exec 'ln -sf ~/.claude/CLAUDE.md ~/CLAUDE.md'
 
-    log_info "CLAUDE.md created at ~/.claude/CLAUDE.md"
+    # Write to dev user's .claude directory
+    container_exec "mkdir -p /home/dev/.claude && cat > /home/dev/.claude/CLAUDE.md << 'CLAUDE_CONFIG'
+$claude_md_content
+CLAUDE_CONFIG"
+    container_exec 'chown -R dev:dev /home/dev/.claude && ln -sf /home/dev/.claude/CLAUDE.md /home/dev/CLAUDE.md && chown -h dev:dev /home/dev/CLAUDE.md'
+
+    log_info "CLAUDE.md created for root and dev users"
 }
 
 # -------------------------------------------
@@ -685,7 +866,8 @@ print_status_summary() {
     echo "=========================================="
     echo ""
     echo "SSH (from any Tailscale device):"
-    echo "  ssh root@$ts_ip"
+    echo "  ssh dev@$ts_ip       # For Claude Code (recommended)"
+    echo "  ssh root@$ts_ip      # For admin tasks"
     echo "  ssh $CONTAINER_NAME  # if MagicDNS enabled"
     echo ""
     echo "PostgreSQL (from dev machine):"
@@ -694,13 +876,16 @@ print_status_summary() {
     echo "  postgresql://dev:dev@$ts_ip:5432/dev"
     echo ""
     echo "Inside container:"
-    echo "  lxc exec $CONTAINER_NAME -- bash"
+    echo "  lxc exec $CONTAINER_NAME -- su - dev  # as dev user"
+    echo "  lxc exec $CONTAINER_NAME -- bash      # as root"
     echo ""
     echo "=========================================="
-    echo "QUICK START"
+    echo "QUICK START (for Claude Code)"
     echo "=========================================="
     echo ""
-    echo "  ssh root@$ts_ip"
+    echo "  ssh dev@$ts_ip"
+    echo "  cd ~/projects/<name>"
+    echo "  claude --dangerously-skip-permissions"
     echo ""
 }
 
@@ -723,11 +908,13 @@ if [[ "$SKIP_TAILSCALE" == true ]]; then
 else
     install_tailscale      # First - provides connectivity verification
 fi
+create_dev_user        # Create non-root user early (for Claude Code YOLO mode)
 install_postgresql     # Early - apt-based, stable
-install_node           # After apt, provides npm
+install_node           # After apt, provides npm for root
 install_playwright     # Requires npm
-install_claude_code    # Last - independent
-setup_ssh_keys         # Copy host's authorized keys
+install_claude_code    # Claude Code for root
+setup_dev_user_environment  # Node.js and Claude Code for dev user
+setup_ssh_keys         # Copy host's authorized keys to root and dev
 configure_shell        # After all tools installed
 create_claude_md       # Claude Code environment awareness
 

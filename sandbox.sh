@@ -10,6 +10,11 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Load config if exists (for TAILSCALE_AUTHKEY, etc.)
+if [[ -f "$SCRIPT_DIR/.sandbox.conf" ]]; then
+    source "$SCRIPT_DIR/.sandbox.conf"
+fi
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -63,14 +68,16 @@ cmd_list() {
 
 cmd_create() {
     local name="${1:-}"
-    local ts_key="${2:-}"
+    local ts_key="${2:-${TAILSCALE_AUTHKEY:-}}"
 
     if [[ -z "$name" ]]; then
-        echo "Usage: $0 create <name> <tailscale-key>"
+        echo "Usage: $0 create <name> [tailscale-key]"
         echo "       $0 create <name> --no-tailscale"
         echo ""
         echo "Options:"
         echo "  --no-tailscale    Skip Tailscale setup (local development only)"
+        echo ""
+        echo "If no key provided, uses TAILSCALE_AUTHKEY from .sandbox.conf"
         exit 1
     fi
 
@@ -82,10 +89,15 @@ cmd_create() {
         echo -e "${CYAN}Provisioning without Tailscale...${NC}"
         "$SCRIPT_DIR/03-provision-container.sh" "$name" "--no-tailscale"
     elif [[ -n "$ts_key" ]]; then
+        echo -e "${CYAN}Using Tailscale auth key from ${2:+command line}${2:-config}${NC}"
         "$SCRIPT_DIR/03-provision-container.sh" "$name" "$ts_key"
     else
-        echo "Usage: $0 create <name> <tailscale-key>"
-        echo "       $0 create <name> --no-tailscale"
+        echo "Error: No Tailscale auth key provided"
+        echo ""
+        echo "Either:"
+        echo "  1. Pass key as argument: $0 create $name tskey-auth-xxx"
+        echo "  2. Add to .sandbox.conf: TAILSCALE_AUTHKEY=\"tskey-auth-xxx\""
+        echo "  3. Skip Tailscale: $0 create $name --no-tailscale"
         exit 1
     fi
 }

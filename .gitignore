@@ -1,1 +1,4 @@
 dev-sandbox-infra.tar.gz
+.sandbox.conf
+provision.log
+sandbox-ops.log
