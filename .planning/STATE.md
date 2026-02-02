@@ -2,20 +2,20 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-01)
+See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Complete isolation between projects so Claude Code can run autonomously without contaminating other environments
-**Current focus:** v1.1 Milestone AUDITED
+**Current focus:** v1.2 Auth & Polish
 
 ## Current Position
 
-Milestone: v1.1 (Project Migration)
-Phase: 9 of 9 (CLI Integration) COMPLETE
-Plan: 1 of 1 in current phase
-Status: v1.1 milestone AUDITED - PASSED
-Last activity: 2026-02-01 - Milestone audit complete
+Milestone: v1.2 (Auth & Polish)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-02 — Milestone v1.2 started
 
-Progress: [####################] 100% (9/9 phases complete)
+Progress: [                    ] 0% (0/? phases complete)
 
 ## Accumulated Context
 

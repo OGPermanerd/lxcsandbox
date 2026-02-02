@@ -8,33 +8,31 @@ Infrastructure scripts to create fully isolated development sandboxes on a singl
 
 Complete isolation between projects so Claude Code can run autonomously (`--dangerously-skip-permissions`) without contaminating other environments.
 
-## Current Milestone: v1.1 Project Migration
+## Current Milestone: v1.2 Auth & Polish
 
-**Goal:** Migrate existing Node.js projects into containerized sandboxes with automated environment setup.
+**Goal:** Fix authentication issues so Claude Code and git work out-of-the-box in new containers.
 
 **Target features:**
-- Analyze existing projects (detect Node.js, PostgreSQL, .env, migrations)
-- Support both local directory paths and git repository URLs as sources
-- Copy project files into new container
-- Detect and run database migrations (Prisma, Drizzle, raw SQL)
-- Preserve .env files with secrets intact
-- Update environment variables for container context
-- New `sandbox.sh migrate` command with `04-migrate-project.sh` backend
+- Copy Claude Code credentials (~/.claude) from host to container automatically
+- Copy git credentials (SSH keys, gh CLI auth) from host by default
+- Remove `--with-gh-creds` flag (make credential copying default behavior)
+- Address any tech debt discovered during fixes
 
-## Current State (v1.0 Shipped)
+## Current State (v1.1 Shipped)
 
-**Shipped:** 2026-02-01
+**Shipped:** 2026-02-02
 
-**Deliverables:**
+**Deliverables (v1.0):**
 - `01-setup-host.sh` — Idempotent LXD setup with bridge network and btrfs storage
 - `02-create-container.sh` — Container launch with TUN device and resource limits
 - `03-provision-container.sh` — Full dev stack (Tailscale, Node.js, PostgreSQL, Playwright, Claude Code)
-- `sandbox.sh` — Unified CLI with 7 commands (create, shell, list, snapshot, restore, delete, info)
+- `sandbox.sh` — Unified CLI with 8 commands (create, shell, list, snapshot, restore, delete, info, migrate)
 
-**Stats:**
-- 1,428 lines of bash across 4 scripts
-- 32 requirements shipped
-- All scripts idempotent and tested via code review
+**Deliverables (v1.1):**
+- `04-migrate-project.sh` — Project migration with git clone, local copy, Node.js setup, database integration
+- Package manager detection (npm/yarn/pnpm)
+- Database migration execution (Prisma/Drizzle/raw SQL)
+- Monorepo build support
 
 **Blocking:** Integration testing on actual LXD host with Tailscale auth key
 
@@ -50,14 +48,16 @@ Complete isolation between projects so Claude Code can run autonomously (`--dang
 - ✓ Playwright with Chromium and Firefox — v1.0
 - ✓ Claude Code CLI — v1.0
 - ✓ Management CLI (create, shell, list, snapshot, restore, delete, info) — v1.0
+- ✓ Project migration from git URLs and local paths — v1.1
+- ✓ Package manager detection and dependency installation — v1.1
+- ✓ Database creation and migration execution — v1.1
+- ✓ Monorepo build support — v1.1
 
 ### Active
 
-- [ ] Migration script analyzes existing projects for containerization
-- [ ] Migration supports both local paths and git repository URLs
-- [ ] Migration detects and runs database migrations
-- [ ] Migration preserves .env files with environment variables
-- [ ] CLI provides migrate command for user-friendly interface
+- [ ] Claude Code credentials copied from host automatically
+- [ ] Git credentials (SSH keys, gh CLI) copied from host by default
+- [ ] Remove --with-gh-creds flag (credential copying is default)
 
 ### Out of Scope
 
@@ -106,4 +106,4 @@ Complete isolation between projects so Claude Code can run autonomously (`--dang
 | Argument-based CLI | Non-interactive for scriptability | ✓ Good — automation friendly |
 
 ---
-*Last updated: 2026-02-01 after v1.1 milestone start*
+*Last updated: 2026-02-02 after v1.2 milestone start*
