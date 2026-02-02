@@ -683,6 +683,12 @@ print_status_summary() {
     echo "Inside container:"
     echo "  lxc exec $CONTAINER_NAME -- bash"
     echo ""
+    echo "=========================================="
+    echo "QUICK START"
+    echo "=========================================="
+    echo ""
+    echo "  ssh root@$ts_ip"
+    echo ""
 }
 
 # ============================================
