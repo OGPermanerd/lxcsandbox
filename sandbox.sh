@@ -92,6 +92,16 @@ cmd_create() {
         echo -e "${CYAN}Provisioning without Tailscale...${NC}"
         "$SCRIPT_DIR/03-provision-container.sh" "$name" "--no-tailscale"
     elif [[ -n "$ts_key" ]]; then
+        if [[ ! "$ts_key" =~ ^tskey-auth- ]]; then
+            echo "Error: Invalid Tailscale key format"
+            echo ""
+            echo "Auth key must start with 'tskey-auth-'"
+            echo "You may have provided an API key instead of an auth key."
+            echo ""
+            echo "Get an AUTH key at: https://login.tailscale.com/admin/settings/keys"
+            echo "  -> Click 'Generate auth key' (NOT 'Generate API key')"
+            exit 1
+        fi
         echo -e "${CYAN}Using Tailscale auth key from ${2:+command line}${2:-config}${NC}"
         "$SCRIPT_DIR/03-provision-container.sh" "$name" "$ts_key"
     else

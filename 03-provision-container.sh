@@ -101,11 +101,14 @@ fi
 # Validate Tailscale Auth Key Format
 # -------------------------------------------
 if [[ "$SKIP_TAILSCALE" == false ]]; then
-    if [[ ! "$TAILSCALE_AUTHKEY" =~ ^tskey- ]]; then
+    if [[ ! "$TAILSCALE_AUTHKEY" =~ ^tskey-auth- ]]; then
         log_error "Invalid Tailscale auth key format"
         echo ""
-        echo "Auth key must start with 'tskey-'"
-        echo "Get a key at: https://login.tailscale.com/admin/settings/keys"
+        echo "Auth key must start with 'tskey-auth-'"
+        echo "You may have provided an API key (tsapi-/tskey-api-) instead of an auth key."
+        echo ""
+        echo "Get an AUTH key at: https://login.tailscale.com/admin/settings/keys"
+        echo "  -> Click 'Generate auth key' (NOT 'Generate API key')"
         echo ""
         echo "Recommended settings:"
         echo "  - Reusable: Yes"
