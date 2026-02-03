@@ -192,7 +192,7 @@ cmd_restore() {
     validate_container_exists "$name"
 
     # Verify snapshot exists
-    if ! lxc info "$name" | grep -q "^ *$label "; then
+    if ! lxc info "$name" | grep -q "$label"; then
         echo "Error: Snapshot '$label' does not exist for container '$name'"
         exit 1
     fi
