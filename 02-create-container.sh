@@ -251,7 +251,7 @@ wait_for_network() {
         spinstr=$temp${spinstr%"$temp"}
 
         sleep 1
-        ((elapsed++))
+        ((++elapsed))
     done
 
     printf "\r\033[K"  # Clear line

@@ -281,6 +281,7 @@ setup_node_version() {
 }
 
 # Install dependencies with the appropriate package manager
+# Falls back to --legacy-peer-deps for npm if initial install fails (React 19 compat)
 install_dependencies() {
     local project_dir="$1"
     local package_manager="$2"
@@ -298,7 +299,11 @@ install_dependencies() {
                 yarn install
                 ;;
             npm)
-                npm install
+                # Try normal install first, fall back to --legacy-peer-deps for React 19 compat
+                npm install || {
+                    echo 'npm install failed, retrying with --legacy-peer-deps...'
+                    npm install --legacy-peer-deps
+                }
                 ;;
         esac
     "
