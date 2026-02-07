@@ -181,23 +181,68 @@ create_dev_user() {
     # Check if user already exists
     if container_exec 'id dev &>/dev/null'; then
         log_info "Dev user already exists"
-        return 0
+    else
+        container_exec '
+            # Create dev user with home directory and bash shell
+            useradd -m -s /bin/bash dev
+
+            # Add to sudo group with passwordless sudo
+            echo "dev ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/dev
+            chmod 440 /etc/sudoers.d/dev
+
+            # Create projects directory
+            mkdir -p /home/dev/projects
+            chown dev:dev /home/dev/projects
+        '
+        log_info "Dev user created with passwordless sudo"
     fi
 
+    # Ensure .bashrc and .profile exist so nvm/claude installers can update them
+    # (useradd -m should copy from /etc/skel but some images lack these)
+    # This runs even if user existed, to fix incomplete provisioning
     container_exec '
-        # Create dev user with home directory and bash shell
-        useradd -m -s /bin/bash dev
+        if [[ ! -f /home/dev/.bashrc ]]; then
+            cat > /home/dev/.bashrc << "BASHRC"
+# ~/.bashrc: executed by bash(1) for non-login shells.
 
-        # Add to sudo group with passwordless sudo
-        echo "dev ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/dev
-        chmod 440 /etc/sudoers.d/dev
+# If not running interactively, do not do anything
+case $- in
+    *i*) ;;
+      *) return;;
+esac
 
-        # Create projects directory
-        mkdir -p /home/dev/projects
-        chown dev:dev /home/dev/projects
+# Basic prompt
+PS1='"'"'\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '"'"'
+
+# Aliases
+alias ll="ls -la"
+alias ls="ls --color=auto"
+BASHRC
+            chown dev:dev /home/dev/.bashrc
+        fi
+
+        if [[ ! -f /home/dev/.profile ]]; then
+            cat > /home/dev/.profile << "PROFILE"
+# ~/.profile: executed by the command interpreter for login shells.
+
+# if running bash
+if [ -n "$BASH_VERSION" ]; then
+    # include .bashrc if it exists
+    if [ -f "$HOME/.bashrc" ]; then
+        . "$HOME/.bashrc"
+    fi
+fi
+
+# set PATH so it includes users private bin if it exists
+if [ -d "$HOME/.local/bin" ] ; then
+    PATH="$HOME/.local/bin:$PATH"
+fi
+PROFILE
+            chown dev:dev /home/dev/.profile
+        fi
     '
 
-    log_info "Dev user created with passwordless sudo"
+    log_info "Shell config files verified for dev user"
 }
 
 # -------------------------------------------
@@ -226,7 +271,7 @@ wait_for_tailscale() {
         spinstr=$temp${spinstr%"$temp"}
 
         sleep 1
-        ((elapsed++))
+        ((++elapsed))
     done
 
     printf "\r\033[K"  # Clear line
@@ -628,7 +673,7 @@ setup_ssh_keys() {
             log_info "Adding public key: $pubkey"
             lxc file push "$pubkey" "$CONTAINER_NAME/home/dev/.ssh/tmp_key.pub"
             container_exec 'cat /home/dev/.ssh/tmp_key.pub >> /home/dev/.ssh/authorized_keys && rm /home/dev/.ssh/tmp_key.pub'
-            ((keys_added++))
+            ((++keys_added))
         fi
     done
 
@@ -647,7 +692,7 @@ setup_ssh_keys() {
     if [[ "$auth_keys_found" == "true" ]]; then
         # Deduplicate and append to container
         sort -u "$temp_keys" | lxc exec "$CONTAINER_NAME" -- tee -a /home/dev/.ssh/authorized_keys > /dev/null
-        ((keys_added++))
+        ((++keys_added))
         log_info "Added authorized_keys for external SSH access"
     else
         log_warn "No authorized_keys found on host - external SSH access (like Termius) may not work"
@@ -705,7 +750,7 @@ setup_git_credentials() {
             # Copy to root user
             lxc file push "$keyfile" "$CONTAINER_NAME/root/.ssh/$keyname"
             container_exec "chmod 600 /root/.ssh/$keyname"
-            ((copied_items++))
+            ((++copied_items))
 
             # Also copy the corresponding .pub file if it exists
             if [[ -f "${keyfile}.pub" ]]; then
@@ -767,7 +812,7 @@ setup_git_credentials() {
         container_exec 'chown dev:dev /home/dev/.gitconfig && chmod 644 /home/dev/.gitconfig'
         lxc file push "$source_home/.gitconfig" "$CONTAINER_NAME/root/.gitconfig"
         container_exec 'chmod 644 /root/.gitconfig'
-        ((copied_items++))
+        ((++copied_items))
     else
         log_warn "No .gitconfig found at $source_home/.gitconfig"
     fi
@@ -783,7 +828,7 @@ setup_git_credentials() {
         container_exec 'mkdir -p /root/.config'
         tar -C "$source_home/.config" -cf - gh | lxc exec "$CONTAINER_NAME" -- tar -C /root/.config -xf -
         container_exec 'chmod 700 /root/.config/gh'
-        ((copied_items++))
+        ((++copied_items))
         log_info "GitHub CLI config copied (gh auth status will work)"
     else
         log_warn "No GitHub CLI config found at $source_home/.config/gh"
