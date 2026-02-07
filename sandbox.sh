@@ -50,6 +50,11 @@ show_help() {
     echo "  1  Error (invalid arguments, command failed)"
     echo "  2  User cancelled"
     echo ""
+    echo "Configuration (.sandbox.conf):"
+    echo "  TAILSCALE_AUTHKEY   Reusable Tailscale auth key"
+    echo "  TSCLIP_HOST         tsclip server Tailscale IP (default: 100.68.60.121)"
+    echo "  TSCLIP_PORT         tsclip server port (default: 9876)"
+    echo ""
     echo "Examples:"
     echo "  $0 create relay-dev tskey-auth-xxxxx"
     echo "  sudo $0 migrate relay-dev https://github.com/user/project.git"
@@ -84,13 +89,18 @@ cmd_create() {
         exit 1
     fi
 
+    # Build tsclip flags from config
+    local extra_args=()
+    [[ -n "${TSCLIP_HOST:-}" ]] && extra_args+=(--tsclip-host "$TSCLIP_HOST")
+    [[ -n "${TSCLIP_PORT:-}" ]] && extra_args+=(--tsclip-port "$TSCLIP_PORT")
+
     # Create the container
     "$SCRIPT_DIR/02-create-container.sh" "$name"
 
     # Provision based on options
     if [[ "$ts_key" == "--no-tailscale" ]]; then
         echo -e "${CYAN}Provisioning without Tailscale...${NC}"
-        "$SCRIPT_DIR/03-provision-container.sh" "$name" "--no-tailscale"
+        "$SCRIPT_DIR/03-provision-container.sh" "$name" "--no-tailscale" "${extra_args[@]}"
     elif [[ -n "$ts_key" ]]; then
         if [[ ! "$ts_key" =~ ^tskey-auth- ]]; then
             echo "Error: Invalid Tailscale key format"
@@ -103,7 +113,7 @@ cmd_create() {
             exit 1
         fi
         echo -e "${CYAN}Using Tailscale auth key from ${2:+command line}${2:-config}${NC}"
-        "$SCRIPT_DIR/03-provision-container.sh" "$name" "$ts_key"
+        "$SCRIPT_DIR/03-provision-container.sh" "$name" "$ts_key" "${extra_args[@]}"
     else
         echo "Error: No Tailscale auth key provided"
         echo ""

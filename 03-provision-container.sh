@@ -20,6 +20,8 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Trap for clean error messages
 trap 'log_error "Script failed at line $LINENO"' ERR
 
@@ -48,7 +50,9 @@ if [[ $# -lt 2 ]]; then
     echo "                    Get one at: https://login.tailscale.com/admin/settings/keys"
     echo ""
     echo "Options:"
-    echo "  --no-tailscale    Skip Tailscale setup (local development only)"
+    echo "  --no-tailscale             Skip Tailscale setup (local development only)"
+    echo "  --tsclip-host <ip>         tsclip server Tailscale IP (default: 100.68.60.121)"
+    echo "  --tsclip-port <port>       tsclip server port (default: 9876)"
     echo ""
     echo "Note: Git credentials (SSH keys, .gitconfig, gh CLI) and Claude Code credentials"
     echo "      are automatically copied from the host user who runs sudo."
@@ -58,6 +62,8 @@ fi
 CONTAINER_NAME="$1"
 TAILSCALE_AUTHKEY="$2"
 SKIP_TAILSCALE=false
+TSCLIP_HOST="${TSCLIP_HOST:-100.68.60.121}"
+TSCLIP_PORT="${TSCLIP_PORT:-9876}"
 
 if [[ "$TAILSCALE_AUTHKEY" == "--no-tailscale" ]]; then
     SKIP_TAILSCALE=true
@@ -71,6 +77,14 @@ while [[ $# -gt 0 ]]; do
             # Allow --no-tailscale as trailing option too
             SKIP_TAILSCALE=true
             shift
+            ;;
+        --tsclip-host)
+            TSCLIP_HOST="$2"
+            shift 2
+            ;;
+        --tsclip-port)
+            TSCLIP_PORT="$2"
+            shift 2
             ;;
         *)
             log_error "Unknown option: $1"
@@ -494,6 +508,63 @@ install_playwright() {
     '
 
     log_info "Playwright browsers installed"
+}
+
+# -------------------------------------------
+# Co-Browse Environment
+# -------------------------------------------
+
+# Install co-browse (Xvfb + x11vnc + noVNC + Chromium) via xfer/cobrowse-setup.sh
+install_cobrowse() {
+    log_info "Setting up co-browse environment..."
+    local setup_script="$SCRIPT_DIR/xfer/cobrowse-setup.sh"
+    if [[ ! -f "$setup_script" ]]; then
+        log_warn "xfer/cobrowse-setup.sh not found, skipping co-browse setup"
+        return 0
+    fi
+    lxc file push "$setup_script" "$CONTAINER_NAME/tmp/cobrowse-setup.sh"
+    container_exec 'chmod +x /tmp/cobrowse-setup.sh && SUDO_USER=dev /tmp/cobrowse-setup.sh && rm /tmp/cobrowse-setup.sh'
+    log_info "Co-browse environment installed"
+}
+
+# -------------------------------------------
+# Clipboard Bridge
+# -------------------------------------------
+
+# Install tsclip clipboard bridge (clip/getclip commands)
+install_clipboard_bridge() {
+    log_info "Setting up clipboard bridge (tsclip)..."
+    local tsclip_url="http://${TSCLIP_HOST}:${TSCLIP_PORT}"
+
+    # Create /usr/local/bin/clip
+    container_exec "cat > /usr/local/bin/clip << 'CLIPEOF'
+#!/usr/bin/env bash
+# Send stdin to tsclip server
+curl -s -X POST -d @- ${tsclip_url}/copy
+CLIPEOF
+chmod +x /usr/local/bin/clip"
+
+    # Create /usr/local/bin/getclip
+    container_exec "cat > /usr/local/bin/getclip << 'GETCLIPEOF'
+#!/usr/bin/env bash
+# Read from tsclip server
+curl -s ${tsclip_url}/paste
+GETCLIPEOF
+chmod +x /usr/local/bin/getclip"
+
+    # Add TSCLIP_URL to dev user's .bashrc
+    container_exec "
+        if ! grep -q 'TSCLIP' /home/dev/.bashrc 2>/dev/null; then
+            cat >> /home/dev/.bashrc << RCEOF
+
+# TSCLIP - shared clipboard bridge
+export TSCLIP_URL=\"${tsclip_url}\"
+RCEOF
+            chown dev:dev /home/dev/.bashrc
+        fi
+    "
+
+    log_info "Clipboard bridge installed (clip/getclip -> $tsclip_url)"
 }
 
 # -------------------------------------------
@@ -972,7 +1043,8 @@ SHELL_CONFIG
 create_claude_md() {
     log_info "Creating CLAUDE.md for Claude Code..."
 
-    local node_version pg_version tailscale_ip container_name
+    local node_version pg_version tailscale_ip container_name tsclip_url
+    tsclip_url="http://${TSCLIP_HOST}:${TSCLIP_PORT}"
     node_version=$(container_exec 'node --version 2>/dev/null || echo "not installed"')
     pg_version=$(container_exec 'psql --version 2>/dev/null | head -1 || echo "not installed"')
     tailscale_ip=$(container_exec 'tailscale ip -4 2>/dev/null || echo "not connected"')
@@ -1037,6 +1109,8 @@ The dev user has passwordless sudo for any admin tasks.
 ### Other Tools
 - Playwright (Chromium, Firefox)
 - Claude Code CLI with Get Shit Done (GSD) - use /gsd:help
+- Co-browse environment (Xvfb + x11vnc + noVNC + Chromium) - see below
+- Clipboard bridge (clip/getclip via tsclip) - see below
 - git, curl, mosh, build-essential
 
 ## Common Commands
@@ -1064,6 +1138,61 @@ These are pre-configured in ~/.bashrc:
 - \\\`DATABASE_URL\\\` - PostgreSQL connection string
 - \\\`PGHOST\\\`, \\\`PGPORT\\\`, \\\`PGUSER\\\`, \\\`PGPASSWORD\\\`, \\\`PGDATABASE\\\`
 - \\\`NVM_DIR\\\` - nvm installation directory
+
+## Co-Browse Environment
+
+A shared Chromium browser runs on virtual display :99, accessible to both you and the user.
+- The user sees the browser via noVNC at http://$tailscale_ip:6080/vnc.html
+- You can interact with it using DISPLAY=:99 and standard X11 tools
+
+**Starting a co-browse session:**
+\\\`\\\`\\\`bash
+~/cobrowse-start.sh    # starts Xvfb, x11vnc, noVNC, and Chromium
+~/cobrowse-stop.sh     # stops everything
+\\\`\\\`\\\`
+
+**Browser interaction tools:**
+\\\`\\\`\\\`bash
+export DISPLAY=:99
+import -window root /tmp/screenshot.png    # full screen capture
+xdotool key ctrl+l                          # focus URL bar
+xdotool type \"https://example.com\"          # type a URL
+xdotool key Return                          # press Enter
+xdotool mousemove 500 300                   # move mouse
+xdotool click 1                             # left click
+xdotool key ctrl+a                          # select all
+xdotool key ctrl+c                          # copy
+xdotool key ctrl+v                          # paste
+xdotool key Tab                             # move between fields
+\\\`\\\`\\\`
+
+**Rules:**
+- Always take a screenshot first to understand the current browser state before interacting
+- Narrate what you're doing so the user can follow along in noVNC
+- Pause between actions to let pages load (sleep 1-2 seconds)
+- The user can also interact with the browser at any time - check the screen state before acting
+- For sensitive fields (passwords, API keys), ask the user to type them directly via noVNC rather than handling credentials yourself
+
+## Clipboard Bridge
+
+A shared clipboard server runs at $tsclip_url on the Tailscale network.
+
+**To send text to the user (URLs, config values, tokens, commands for their browser):**
+\\\`\\\`\\\`bash
+echo \"value\" | clip
+\\\`\\\`\\\`
+
+**To read text the user has pasted from their local machine:**
+\\\`\\\`\\\`bash
+getclip
+\\\`\\\`\\\`
+
+**Rules:**
+- Use the co-browse environment when possible instead of clipboard for visual tasks
+- For non-browser text exchange, use clip/getclip
+- When you need the user to provide a value (API key, token, etc), tell them to paste it in the browser UI at $tsclip_url then use getclip to retrieve it
+- For multi-line content, use printf with literal \\\\n newlines, NOT echo. Example:
+  printf \"## Step 1\\\\nGo to console.cloud.google.com\\\\n\\\\n## Step 2\\\\nClick Create Credentials\\\\n\" | clip
 
 ## Notes
 
@@ -1153,6 +1282,16 @@ print_status_summary() {
     echo "Playwright:"
     echo "  Browsers: Chromium, Firefox"
     echo ""
+    echo "Co-Browse:"
+    echo "  noVNC URL: http://$ts_ip:6080/vnc.html"
+    echo "  Start: ~/cobrowse-start.sh"
+    echo "  Stop:  ~/cobrowse-stop.sh"
+    echo ""
+    echo "Clipboard Bridge:"
+    echo "  tsclip URL: http://${TSCLIP_HOST}:${TSCLIP_PORT}"
+    echo "  Send:  echo 'text' | clip"
+    echo "  Read:  getclip"
+    echo ""
     echo "Claude Code:"
     echo "  Version: $claude_ver"
     echo "  Path: ~/.local/bin/claude"
@@ -1190,6 +1329,10 @@ print_status_summary() {
     echo "  cd ~/projects/<name>"
     echo "  claude --dangerously-skip-permissions"
     echo ""
+    echo "  # Start co-browse session:"
+    echo "  ~/cobrowse-start.sh"
+    echo "  # Then open: http://$ts_ip:6080/vnc.html"
+    echo ""
 }
 
 # ============================================
@@ -1215,6 +1358,8 @@ create_dev_user        # Create non-root user early (for Claude Code YOLO mode)
 install_postgresql     # Early - apt-based, stable
 install_node           # After apt, provides npm for root
 install_playwright     # Requires npm
+install_cobrowse       # Co-browse environment (Xvfb + noVNC + Chromium)
+install_clipboard_bridge  # tsclip clipboard bridge (clip/getclip)
 install_claude_code    # Claude Code for root
 setup_dev_user_environment  # Node.js and Claude Code for dev user
 copy_claude_credentials    # Copy host's Claude auth to container
